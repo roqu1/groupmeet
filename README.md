@@ -25,12 +25,22 @@ cd groupmeet
 ```bash
 cd frontend
 npm install
-cd ..
 ```
 
-3. Build and start the application using Docker Compose:
+3. Set up environment variables:
+
+   - Copy `.env.example` to `.env`:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   - Adjust the variables in `.env` if needed
+
+4. Build and start the application using Docker Compose:
 
 ```bash
+cd ..
 docker-compose up --build
 ```
 
@@ -89,7 +99,7 @@ The PostgreSQL database is accessible at:
 
 ### Frontend (.env)
 
-- `VITE_API_URL`: Backend API URL
+- `VITE_BACKEND_URL`: Backend API URL (default: http://localhost:8080)
 
 ### Backend (application.properties)
 
