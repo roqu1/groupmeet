@@ -18,9 +18,9 @@ const TestConnection = () => {
   }, []);
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Backend Connection Test</h2>
-      {error ? <p style={{ color: "red" }}>{error}</p> : <p>{message}</p>}
+    <div className="p-5">
+      <h2 className="text-xl font-bold mb-3">Backend Connection Test</h2>
+      {error ? <p className="text-red-500">{error}</p> : <p>{message}</p>}
     </div>
   );
 };
