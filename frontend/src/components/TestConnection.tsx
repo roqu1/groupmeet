@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { API_CONFIG } from "../config/api";
+import { useState, useEffect } from 'react';
+import { API_CONFIG } from '../config/api';
 
 const TestConnection = () => {
-  const [message, setMessage] = useState<string>("Loading...");
-  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>('Loading...');
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.test}`)
@@ -14,7 +14,7 @@ const TestConnection = () => {
         return response.text();
       })
       .then((data) => setMessage(data))
-      .catch((err) => setError("Error connecting to backend: " + err.message));
+      .catch((err) => setError('Error connecting to backend: ' + err.message));
   }, []);
 
   return (
