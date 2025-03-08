@@ -40,7 +40,7 @@ npm install
 4. Build and start the application using Docker Compose:
 
 ```bash
-cd ..
+cd .. 
 docker-compose up --build
 ```
 
@@ -51,6 +51,18 @@ This command will:
 - Start PostgreSQL database on port 5432
 
 ## Development Mode
+
+### Code Formatting
+
+Before pushing your commits, always format your code:
+
+```bash
+# Format frontend code
+cd frontend
+npm run format
+
+# The backend code formatting is handled by your IDE's Prettier plugin
+```
 
 ### Frontend Development (Hot Reload)
 
