@@ -1,0 +1,9 @@
+dist
+build
+coverage
+node_modules
+*.log
+.git
+*.ico
+*.svg
+package-lock.json
