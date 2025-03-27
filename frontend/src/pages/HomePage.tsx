@@ -7,7 +7,6 @@ export default function HomePage() {
 
   return (
     <div className="container-wrapper">
-      <h1 className="text-3xl font-bold mb-6">GroupMeet</h1>
       <TestConnection />
 
       <div className="mt-8 p-4 border rounded-lg">
