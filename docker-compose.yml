@@ -23,6 +23,12 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/groupmeet
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
+      - SERVER_PORT=8080
+      # CORS Configuration
+      - CORS_ENVIRONMENT=local # for local use local | for prod use production 
+      - FRONTEND_DEV_URL=http://localhost:5173
+      - FRONTEND_DOCKER_URL=http://frontend:5173
+      - FRONTEND_PROD_URL=https://example.com # TODO: replace with actual production URL
 
   db:
     image: postgres:15-alpine
