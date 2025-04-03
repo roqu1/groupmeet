@@ -1,16 +1,18 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '../ui/input.tsx';
 import { Button } from '../ui/button.tsx';
-import { User, Mail, Lock, UserCheck } from 'lucide-react';
+import { User, Mail, Lock, UserCheck, Loader2 } from 'lucide-react';
+import { useRegister } from '../../hooks/auth/useRegister';
 
 const registerSchema = z
   .object({
     gender: z.enum(['männlich', 'weiblich'], {
       required_error: 'Bitte wählen Sie Ihr Geschlecht aus',
     }),
-    nickname: z.string().min(4, 'Benutzername ist erforderlich'),
+    username: z.string().min(4, 'Benutzername ist erforderlich'),
     firstName: z.string().min(1, 'Vorname ist erforderlich'),
     lastName: z.string().min(1, 'Nachname ist erforderlich'),
     email: z.string().email('Ungültige E-Mail-Adresse'),
@@ -30,6 +32,8 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 const RegisterForm = () => {
+  const { register: registerUser, isLoading, error, data, clearStatus } = useRegister();
+
   const {
     register,
     handleSubmit,
@@ -41,8 +45,19 @@ const RegisterForm = () => {
     criteriaMode: 'all',
   });
 
-  const onSubmit = () => {
-    reset();
+  useEffect(() => {
+    return () => {
+      clearStatus();
+    };
+  }, [clearStatus]);
+
+  const onSubmit = async (formData: RegisterFormData) => {
+    try {
+      await registerUser(formData);
+      reset();
+    } catch (error) {
+      console.error('Registration failed:', error);
+    }
   };
 
   return (
@@ -50,6 +65,19 @@ const RegisterForm = () => {
       className="max-w-md mx-auto bg-background rounded-md shadow-md p-6"
       onSubmit={handleSubmit(onSubmit)}
     >
+      {data && (
+        <div className="mb-4 text-center p-3 border border-border bg-muted text-foreground rounded">
+          <span className="font-medium text-green-600">Registrierung erfolgreich!</span>
+          <br /> Sie können sich jetzt anmelden.
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-3 border border-destructive/50 bg-destructive/10 text-destructive rounded">
+          {error.message}
+        </div>
+      )}
+
       <div className="mb-4">
         <h2 className="text-lg font-semibold mb-2">Geschlecht:</h2>
         <div className="flex gap-4">
@@ -98,13 +126,13 @@ const RegisterForm = () => {
           </div>
           <Input
             type="text"
-            {...register('nickname')}
+            {...register('username')}
             placeholder="Benutzername"
             className="pl-9"
           />
         </div>
-        {errors.nickname && (
-          <p className="text-destructive text-sm mt-1">{errors.nickname.message}</p>
+        {errors.username && (
+          <p className="text-destructive text-sm mt-1">{errors.username.message}</p>
         )}
       </div>
 
@@ -157,8 +185,15 @@ const RegisterForm = () => {
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={!isValid}>
-        Registrieren
+      <Button type="submit" className="w-full" disabled={!isValid || isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Wird verarbeitet...
+          </>
+        ) : (
+          'Registrieren'
+        )}
       </Button>
     </form>
   );

@@ -4,5 +4,6 @@ export const API_CONFIG = {
   baseUrl: BACKEND_URL,
   endpoints: {
     test: '/api/test',
+    register: '/api/auth/register',
   },
 } as const;
