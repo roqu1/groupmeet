@@ -1,36 +1,40 @@
 package com.groupmeet.application.dto;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import com.groupmeet.application.model.Gender;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class UserRegistrationDto {
-    @NotBlank(message = "Gender is required")
+    @NotBlank(message = "Geschlecht ist erforderlich")
     private String gender;
 
-    @NotBlank(message = "First name is required")
+    @NotBlank(message = "Vorname ist erforderlich")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
+    @NotBlank(message = "Nachname ist erforderlich")
     private String lastName;
 
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "Benutzername ist erforderlich")
     private String username;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "E-Mail ist erforderlich")
+    @Email(message = "Ungültiges E-Mail-Format")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters long")
+    @NotBlank(message = "Passwort ist erforderlich")
+    @Size(min = 8, message = "Das Passwort muss mindestens 8 Zeichen lang sein")
     private String password;
 
-    // Constructors
     public UserRegistrationDto() {}
 
-    // Getters and Setters
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
+    
+    public Gender getGenderEnum() {
+        return Gender.fromDisplayName(gender);
+    }
 
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }

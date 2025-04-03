@@ -3,7 +3,7 @@ package com.groupmeet.application.controller;
 import com.groupmeet.application.dto.UserRegistrationDto;
 import com.groupmeet.application.model.User;
 import com.groupmeet.application.service.UserService;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,6 @@ public class UserController {
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationDto registrationDto) {
         try {
             User registeredUser = userService.registerNewUser(registrationDto);
-            // Remove password from response
             registeredUser.setPassword(null);
             return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
         } catch (UserService.UserRegistrationException e) {
@@ -33,7 +32,6 @@ public class UserController {
         }
     }
 
-    // Helper class for error responses
     public static class ErrorResponse {
         private String message;
 
