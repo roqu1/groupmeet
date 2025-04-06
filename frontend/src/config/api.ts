@@ -5,5 +5,8 @@ export const API_CONFIG = {
   endpoints: {
     test: '/api/test',
     register: '/api/auth/register',
+    login: '/api/auth/login',
+    logout: '/api/auth/logout',
+    me: '/api/auth/me',
   },
 } as const;

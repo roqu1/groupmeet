@@ -1,18 +1,18 @@
 import { useState, useCallback } from 'react';
 import { API_CONFIG } from '../config/api';
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
 export interface FetchOptions {
   method?: HttpMethod;
   headers?: Record<string, string>;
   body?: unknown;
-  withCredentials?: boolean;
 }
 
 export interface ApiError {
   message: string;
   statusCode?: number;
+  validationErrors?: Record<string, string>;
 }
 
 export interface UseHttpReturn<T, E = ApiError> {
@@ -21,6 +21,17 @@ export interface UseHttpReturn<T, E = ApiError> {
   isLoading: boolean;
   sendRequest: (endpoint: string, options?: FetchOptions) => Promise<T>;
   clearState: () => void;
+}
+
+// Helper function to get CSRF token from cookies
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    // For safety, it splits by `;` and takes the first part
+    return parts.pop()?.split(';').shift() ?? null;
+  }
+  return null;
 }
 
 /**
@@ -45,56 +56,93 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
    */
   const sendRequest = useCallback(
     async (endpoint: string, options: FetchOptions = {}): Promise<T> => {
+      let currentError: E | null = null;
       try {
         setIsLoading(true);
         setError(null);
+        setData(null);
 
-        const defaultHeaders = {
+        const method = options.method || 'GET';
+        const defaultHeaders: Record<string, string> = {
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         };
+
+        // Add CSRF token header for non-safe methods
+        if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+          const csrfToken = getCookie('XSRF-TOKEN');
+          if (csrfToken) {
+            defaultHeaders['X-XSRF-TOKEN'] = csrfToken;
+          } else {
+            console.warn(
+              'CSRF token (XSRF-TOKEN) not found in cookies. Request might be rejected by backend.'
+            );
+          }
+        }
 
         const url = `${API_CONFIG.baseUrl}${endpoint}`;
 
         const fetchOptions: RequestInit = {
-          method: options.method || 'GET',
+          method: method,
           headers: {
             ...defaultHeaders,
             ...options.headers,
           },
           body: options.body ? JSON.stringify(options.body) : undefined,
-          credentials: options.withCredentials ? 'include' : 'same-origin',
+          credentials: 'include',
         };
 
         const response = await fetch(url, fetchOptions);
 
-        const responseData =
-          response.status !== 204 ? await response.json() : (null as unknown as T);
-
-        if (!response.ok) {
-          if (responseData && responseData.message === 'Validation failed' && responseData.errors) {
-            const firstErrorKey = Object.keys(responseData.errors)[0];
-            const firstErrorMessage = responseData.errors[firstErrorKey];
-
-            const transformedError = {
-              message: `${firstErrorKey}: ${firstErrorMessage}`,
-              statusCode: response.status,
-              validationErrors: responseData.errors,
-            } as unknown as E;
-            throw transformedError;
-          } else if (responseData && !responseData.message && responseData.error) {
-            const transformedError = {
-              message: responseData.error || 'Validation error',
-              statusCode: response.status,
-            } as unknown as E;
-            throw transformedError;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let responseData: any = null;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.indexOf('application/json') !== -1) {
+          responseData = await response.json();
+        } else if (response.status !== 204 && response.status !== 205) {
+          console.warn(
+            `Received non-JSON response with status ${response.status} for ${method} ${endpoint}`
+          );
+          if (!response.ok) {
+            responseData = { message: `HTTP error! status: ${response.status}` };
           }
-          throw responseData;
         }
 
-        setData(responseData);
-        return responseData;
+        if (!response.ok) {
+          let errorMessage = `HTTP error! status: ${response.status}`;
+          let validationErrors: Record<string, string> | undefined = undefined;
+
+          if (responseData) {
+            if (responseData.message) {
+              errorMessage = responseData.message;
+            } else if (responseData.error) {
+              errorMessage = responseData.error;
+            }
+            if (responseData.errors && typeof responseData.errors === 'object') {
+              errorMessage = 'Validation failed';
+              validationErrors = responseData.errors;
+            }
+          }
+
+          const errorPayload = {
+            message: errorMessage,
+            statusCode: response.status,
+            validationErrors: validationErrors,
+          } as E;
+
+          currentError = errorPayload;
+          throw errorPayload;
+        }
+
+        setData(responseData as T);
+        return responseData as T;
       } catch (err) {
-        setError(err as E);
+        if (!currentError) {
+          currentError = {
+            message: (err as Error).message || 'An unknown network error occurred',
+          } as E;
+        }
+        setError(currentError);
         throw err;
       } finally {
         setIsLoading(false);
