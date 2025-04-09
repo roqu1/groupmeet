@@ -1,17 +1,18 @@
 package com.groupmeet.application.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.groupmeet.application.config.JwtAuthenticationFilter;
-import com.groupmeet.application.config.SecurityConfig;
-import com.groupmeet.application.dto.LoginRequestDto;
-import com.groupmeet.application.dto.UserRegistrationDto;
-import com.groupmeet.application.fixture.UserFixture;
-import com.groupmeet.application.model.Gender;
-import com.groupmeet.application.model.User;
-import com.groupmeet.application.repository.UserRepository;
-import com.groupmeet.application.service.JwtService;
-import com.groupmeet.application.service.UserDetailsServiceImpl;
-import com.groupmeet.application.service.UserService;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.ArrayList;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,17 +32,18 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-
-import java.util.ArrayList;
-import java.util.Optional;
-
-import static org.hamcrest.Matchers.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.groupmeet.application.config.JwtAuthenticationFilter;
+import com.groupmeet.application.config.SecurityConfig;
+import com.groupmeet.application.dto.LoginRequestDto;
+import com.groupmeet.application.dto.UserRegistrationDto;
+import com.groupmeet.application.fixture.UserFixture;
+import com.groupmeet.application.model.Gender;
+import com.groupmeet.application.model.User;
+import com.groupmeet.application.repository.UserRepository;
+import com.groupmeet.application.service.JwtService;
+import com.groupmeet.application.service.UserDetailsServiceImpl;
+import com.groupmeet.application.service.UserService;
 
 @WebMvcTest(controllers = AuthController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, UserDetailsServiceImpl.class})
@@ -193,5 +195,34 @@ class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body));
         return mockMvc.perform(request);
+    }
+
+    @Test
+    @DisplayName("POST /register - Soll Fehler 409 bei Registrierung mit existierendem Email zurückgeben")
+    void shouldReturnConflictWhenRegisteringWithExistingEmailDifferentCase() throws Exception {
+        given(userService.registerNewUser(any(UserRegistrationDto.class)))
+                .willThrow(new UserService.UserRegistrationException("E-Mail ist bereits registriert"));
+
+        UserRegistrationDto registrationDto = UserFixture.createTestMaleUserRegistrationDto("case");
+        registrationDto.setEmail("TEST.CASE@EXAMPLE.COM");
+
+        performPost(REGISTER_URL, registrationDto)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("E-Mail ist bereits registriert")));
+    }
+
+    @Test
+    @DisplayName("POST /register - Soll Fehler 409 bei Registrierung mit existierendem Username zurückgeben")
+    void shouldReturnConflictWhenRegisteringWithExistingUsernameDifferentCase() throws Exception {
+         given(userService.registerNewUser(any(UserRegistrationDto.class)))
+                .willThrow(new UserService.UserRegistrationException("Benutzername ist bereits vergeben"));
+
+        UserRegistrationDto registrationDto = UserFixture.createTestMaleUserRegistrationDto("case");
+        registrationDto.setEmail("unique.case.email@example.com");
+        registrationDto.setUsername("TESTUSERCASE");
+
+        performPost(REGISTER_URL, registrationDto)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("Benutzername ist bereits vergeben")));
     }
 }
