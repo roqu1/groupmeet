@@ -1,13 +1,17 @@
 package com.groupmeet.application.service;
 
-import com.groupmeet.application.dto.UserRegistrationDto;
-import com.groupmeet.application.model.User;
-import com.groupmeet.application.repository.UserRepository;
-import jakarta.validation.Valid;
+import java.util.Locale;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+
+import com.groupmeet.application.dto.UserRegistrationDto;
+import com.groupmeet.application.model.User;
+import com.groupmeet.application.repository.UserRepository;
+
+import jakarta.validation.Valid;
 
 @Service
 @Validated
@@ -22,11 +26,15 @@ public class UserService {
     }
 
     public User registerNewUser(@Valid UserRegistrationDto registrationDto) {
-        if (userRepository.existsByEmail(registrationDto.getEmail())) {
+
+        String lowerCaseEmail = registrationDto.getEmail().toLowerCase(Locale.ROOT);
+        String lowerCaseUsername = registrationDto.getUsername().toLowerCase(Locale.ROOT);
+
+        if (userRepository.existsByEmail(lowerCaseEmail)) {
             throw new UserRegistrationException("E-Mail ist bereits registriert");
         }
 
-        if (userRepository.existsByUsername(registrationDto.getUsername())) {
+        if (userRepository.existsByUsername(lowerCaseUsername)) {
             throw new UserRegistrationException("Benutzername ist bereits vergeben");
         }
 
@@ -35,8 +43,8 @@ public class UserService {
                 registrationDto.getGenderEnum(),
                 registrationDto.getFirstName(),
                 registrationDto.getLastName(),
-                registrationDto.getUsername(),
-                registrationDto.getEmail(),
+                lowerCaseUsername,
+                lowerCaseEmail,
                 passwordEncoder.encode(registrationDto.getPassword())
         );
 

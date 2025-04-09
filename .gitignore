@@ -1,2 +1,3 @@
 .vscode/settings.json
 docker-compose.override.yml
+.env
