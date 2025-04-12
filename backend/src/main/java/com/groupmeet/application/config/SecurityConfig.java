@@ -51,37 +51,42 @@ public class SecurityConfig {
     @Value("${cors.environment}")
     private String environment;
 
+    private static final String[] PUBLIC_PATHS = {
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/logout",
+            "/api/auth/forgot-password",
+            "/api/test" // Testing for local development
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-        requestHandler.setCsrfRequestAttributeName(null); // We dont use csrf in the request body like <input type="hidden" name="_csrf" value="${_csrf.token}"/> (Thymeleaf)
+        requestHandler.setCsrfRequestAttributeName(null); // We dont use csrf in the request body like <input
+                                                          // type="hidden" name="_csrf" value="${_csrf.token}"/>
+                                                          // (Thymeleaf)
 
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // Creates XSRF-TOKEN cookie readable by JS
-                .csrfTokenRequestHandler(requestHandler)
-                 .ignoringRequestMatchers(
-                     new AntPathRequestMatcher("/**", "GET"),
-                     new AntPathRequestMatcher("/**", "HEAD"),
-                     new AntPathRequestMatcher("/**", "TRACE"),
-                     new AntPathRequestMatcher("/**", "OPTIONS")
-                 )
-            )
-            .exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-            )
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout").permitAll() // Allow public access to auth endpoints only
-                .requestMatchers("/api/test").permitAll() // Testing for local development
-                .requestMatchers("/api/auth/me").authenticated()
-                .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // Creates XSRF-TOKEN cookie
+                                                                                            // readable by JS
+                        .csrfTokenRequestHandler(requestHandler)
+                        .ignoringRequestMatchers(
+                                new AntPathRequestMatcher("/**", "GET"),
+                                new AntPathRequestMatcher("/**", "HEAD"),
+                                new AntPathRequestMatcher("/**", "TRACE"),
+                                new AntPathRequestMatcher("/**", "OPTIONS")))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers("/api/auth/me").authenticated() // Keep specific authenticated paths if needed
+                        .anyRequest().authenticated())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -92,9 +97,9 @@ public class SecurityConfig {
         List<String> allowedOrigins = new ArrayList<>();
         allowedOrigins.add(localUrl);
         if ("docker".equals(environment)) {
-             allowedOrigins.add(dockerUrl);
+            allowedOrigins.add(dockerUrl);
         } else if ("production".equals(environment)) {
-             allowedOrigins.add(productionUrl);
+            allowedOrigins.add(productionUrl);
         }
         System.out.println("Allowed CORS Origins: " + allowedOrigins);
 

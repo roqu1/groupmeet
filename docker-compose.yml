@@ -32,6 +32,12 @@ services:
       - FRONTEND_DEV_URL=${FRONTEND_DEV_URL:-http://localhost:5173}
       - FRONTEND_DOCKER_URL=${FRONTEND_DOCKER_URL:-http://frontend:5173}
       - FRONTEND_PROD_URL=${FRONTEND_PROD_URL:-https://example.com} # TODO: replace with actual production URL later
+      # SMTP Configuration for sending emails
+      - SPRING_MAIL_HOST=smtp-relay.brevo.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=${SMTP_LOGIN}
+      - SPRING_MAIL_PASSWORD=${SMTP_MASTER_PASSWORD}
+      - APP_MAIL_SENDER_ADDRESS=${APP_MAIL_SENDER_ADDRESS}
 
   db:
     image: postgres:15-alpine
