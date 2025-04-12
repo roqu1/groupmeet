@@ -28,6 +28,9 @@ public class JwtService {
     @Value("${jwt.cookie.name}")
     private String jwtCookieName;
 
+    @Value("${jwt.reset.expiration.ms:900000}")
+    private long resetExpiration;
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -95,4 +98,28 @@ public class JwtService {
         }
         return null;
     }
+
+    public String generatePasswordResetToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        return buildToken(claims, username, resetExpiration);
+    }
+
+    private String buildToken(
+            Map<String, Object> extraClaims,
+            String username,
+            long expiration) {
+        return Jwts.builder()
+                .claims(extraClaims)
+                .subject(username)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSignInKey())
+                .compact();
+    }
+
+    public boolean isPasswordResetTokenValid(String token, String username) {
+        final String extractedUsername = extractUsername(token);
+        return (username.equals(extractedUsername)) && !isTokenExpired(token);
+    }
+
 }
