@@ -9,5 +9,6 @@ export const API_CONFIG = {
     logout: '/api/auth/logout',
     me: '/api/auth/me',
     forgotPassword: '/api/auth/forgot-password',
+    resetPassword: '/api/auth/reset-password',
   },
 } as const;

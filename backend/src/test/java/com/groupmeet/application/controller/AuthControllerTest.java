@@ -2,7 +2,11 @@ package com.groupmeet.application.controller;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
@@ -33,9 +38,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.Cache;
 import com.groupmeet.application.config.JwtAuthenticationFilter;
 import com.groupmeet.application.config.SecurityConfig;
 import com.groupmeet.application.dto.LoginRequestDto;
+import com.groupmeet.application.dto.ResetPasswordRequestDto;
 import com.groupmeet.application.dto.UserRegistrationDto;
 import com.groupmeet.application.fixture.UserFixture;
 import com.groupmeet.application.model.Gender;
@@ -45,10 +52,6 @@ import com.groupmeet.application.service.EmailService;
 import com.groupmeet.application.service.JwtService;
 import com.groupmeet.application.service.UserDetailsServiceImpl;
 import com.groupmeet.application.service.UserService;
-import com.groupmeet.application.config.CacheConfig;
-import com.groupmeet.application.service.EmailService;
-import com.google.common.cache.Cache;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 @WebMvcTest(controllers = AuthController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, UserDetailsServiceImpl.class})
@@ -90,6 +93,7 @@ class AuthControllerTest {
     private static final String LOGIN_URL = "/api/auth/login";
     private static final String LOGOUT_URL = "/api/auth/logout";
     private static final String ME_URL = "/api/auth/me";
+    private static final String RESET_PASSWORD_URL = "/api/auth/reset-password";
 
     private User testUser;
     private org.springframework.security.core.userdetails.User testUserDetails;
@@ -237,4 +241,63 @@ class AuthControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", is("Benutzername ist bereits vergeben")));
     }
+
+@Test
+@DisplayName("POST /reset-password - Soll Passwort erfolgreich zurücksetzen")
+void shouldResetPasswordSuccessfully() throws Exception {
+        ResetPasswordRequestDto resetRequest = new ResetPasswordRequestDto();
+        resetRequest.setToken("valid-reset-token");
+        resetRequest.setNewPassword("NewValidPassword1!");
+
+        doNothing().when(userService).resetPassword(eq(resetRequest.getToken()), eq(resetRequest.getNewPassword()));
+
+        performPost(RESET_PASSWORD_URL, resetRequest)
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.message", is("Passwort erfolgreich zurückgesetzt.")));
+}
+
+@Test
+@DisplayName("POST /reset-password - Soll 400 bei ungültigem Token zurückgeben")
+void shouldReturnBadRequestForInvalidToken() throws Exception {
+        ResetPasswordRequestDto resetRequest = new ResetPasswordRequestDto();
+        resetRequest.setToken("invalid-or-expired-token");
+        resetRequest.setNewPassword("NewValidPassword1!");
+
+        String errorMessage = "Ungültiger oder abgelaufener Passwort-Reset-Token.";
+        doThrow(new IllegalArgumentException(errorMessage))
+                        .when(userService).resetPassword(eq(resetRequest.getToken()), eq(resetRequest.getNewPassword()));
+
+        performPost(RESET_PASSWORD_URL, resetRequest)
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.message", is(errorMessage)));
+}
+
+@Test
+@DisplayName("POST /reset-password - Soll 400 bei ungültigem Passwort (DTO-Validierung) zurückgeben")
+void shouldReturnBadRequestForInvalidPasswordDtoValidation() throws Exception {
+        ResetPasswordRequestDto resetRequest = new ResetPasswordRequestDto();
+        resetRequest.setToken("valid-token");
+        resetRequest.setNewPassword("short"); // Ungültiges Passwort
+
+
+        performPost(RESET_PASSWORD_URL, resetRequest)
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.message", is("Validation failed")))
+                        .andExpect(jsonPath("$.errors.newPassword").exists());
+}
+
+@Test
+@DisplayName("POST /reset-password - Soll 500 bei internem Serverfehler zurückgeben")
+void shouldReturnInternalServerErrorOnResetPasswordFailure() throws Exception {
+        ResetPasswordRequestDto resetRequest = new ResetPasswordRequestDto();
+        resetRequest.setToken("valid-token");
+        resetRequest.setNewPassword("NewValidPassword1!");
+
+        doThrow(new RuntimeException("Database connection error"))
+                        .when(userService).resetPassword(anyString(), anyString());
+
+        performPost(RESET_PASSWORD_URL, resetRequest)
+                        .andExpect(status().isInternalServerError())
+                        .andExpect(jsonPath("$.message", is("Ein interner Serverfehler ist aufgetreten."))); // Nachricht vom GlobalExceptionHandler
+}
 }

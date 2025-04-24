@@ -2,6 +2,7 @@ package com.groupmeet.application.controller;
 
 import com.groupmeet.application.dto.AuthResponseDto;
 import com.groupmeet.application.dto.LoginRequestDto;
+import com.groupmeet.application.dto.ResetPasswordRequestDto;
 import com.groupmeet.application.dto.ForgotPasswordRequestDto;
 import com.groupmeet.application.dto.UserRegistrationDto;
 import com.groupmeet.application.model.User;
@@ -155,6 +156,20 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse(
                             "Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut."));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequestDto resetRequest) {
+        try {
+            userService.resetPassword(resetRequest.getToken(), resetRequest.getNewPassword());
+            return ResponseEntity.ok(new MessageResponse("Passwort erfolgreich zurückgesetzt."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Fehler beim Zurücksetzen des Passworts: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Ein interner Serverfehler ist aufgetreten."));
         }
     }
 
