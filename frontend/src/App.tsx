@@ -8,6 +8,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import FriendsListPage from './pages/FriendsListPage';
+import { ToastContainer } from 'react-toastify';
 
 function App() {
   return (
@@ -26,11 +28,13 @@ function App() {
           {/* Protected Routes (redirect if not logged in) */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/friends" element={<FriendsListPage />} />
           </Route>
 
           {/* ToDo: Not found page */}
         </Routes>
       </main>
+      <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
     </>
   );
 }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLogout } from '../hooks/auth/useLogout';
 import { Button } from './ui/button';
-import { LogOut, UserCircle, Loader2 } from 'lucide-react';
+import { LogOut, UserCircle, Loader2, Users } from 'lucide-react';
 
 export default function Header() {
   const { isAuthenticated, currentUser, isLoading: isAuthLoading } = useAuth();
@@ -31,6 +31,16 @@ export default function Header() {
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Hallo, {currentUser.firstName}!
               </span>
+
+              <Link
+                to="/friends"
+                className="text-sm font-medium hover:text-primary flex items-center gap-1"
+                title="Freunde"
+              >
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Freunde</span>
+              </Link>
+
               <Link
                 to="/profile"
                 className="text-sm font-medium hover:text-primary flex items-center gap-1"
