@@ -2,14 +2,17 @@ package com.groupmeet.application.controller;
 
 import com.groupmeet.application.dto.AuthResponseDto;
 import com.groupmeet.application.dto.LoginRequestDto;
+import com.groupmeet.application.dto.ForgotPasswordRequestDto;
 import com.groupmeet.application.dto.UserRegistrationDto;
 import com.groupmeet.application.model.User;
 import com.groupmeet.application.repository.UserRepository;
 import com.groupmeet.application.service.JwtService;
 import com.groupmeet.application.service.UserService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -29,6 +32,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserService userService;
@@ -135,6 +140,22 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(AuthResponseDto.fromUser(userOptional.get()));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto forgotPasswordRequest) {
+        try {
+            userService.initiatePasswordReset(forgotPasswordRequest.getEmail());
+            return ResponseEntity
+                    .ok(new MessageResponse(
+                            "Ein Link zum Zurücksetzen des Passworts an die E-Mail-Adresse wurde gesendet."));
+        } catch (Exception e) {
+            logger.error("Unerwarteter Fehler beim Zurücksetzen des Passworts für die E-Mail {}: {}",
+                    forgotPasswordRequest.getEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse(
+                            "Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut."));
+        }
     }
 
     public static class ErrorResponse {

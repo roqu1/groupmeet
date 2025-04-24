@@ -41,9 +41,14 @@ import com.groupmeet.application.fixture.UserFixture;
 import com.groupmeet.application.model.Gender;
 import com.groupmeet.application.model.User;
 import com.groupmeet.application.repository.UserRepository;
+import com.groupmeet.application.service.EmailService;
 import com.groupmeet.application.service.JwtService;
 import com.groupmeet.application.service.UserDetailsServiceImpl;
 import com.groupmeet.application.service.UserService;
+import com.groupmeet.application.config.CacheConfig;
+import com.groupmeet.application.service.EmailService;
+import com.google.common.cache.Cache;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @WebMvcTest(controllers = AuthController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, UserDetailsServiceImpl.class})
@@ -73,6 +78,13 @@ class AuthControllerTest {
 
     @MockBean
     private PasswordEncoder passwordEncoder;
+
+    @MockBean
+    private EmailService emailService;
+
+    @MockBean
+    @Qualifier("passwordResetRateLimitCache")
+    private Cache<String, Long> passwordResetRateLimitCache;
 
     private static final String REGISTER_URL = "/api/auth/register";
     private static final String LOGIN_URL = "/api/auth/login";

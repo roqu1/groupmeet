@@ -88,7 +88,7 @@ public class UserServiceTest {
     @Test
     @DisplayName("Should throw exception when registering with existing username")
     public void shouldThrowExceptionWhenRegisteringWithExistingUsername() {
-        // 
+
         UserRegistrationDto registrationDto = UserFixture.createTestMaleUserRegistrationDto("test");
         
         when(userRepository.existsByEmail(registrationDto.getEmail())).thenReturn(false);

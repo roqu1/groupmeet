@@ -13,6 +13,7 @@ export interface ApiError {
   message: string;
   statusCode?: number;
   validationErrors?: Record<string, string>;
+  retryAfterSeconds?: number;
 }
 
 export interface UseHttpReturn<T, E = ApiError> {
