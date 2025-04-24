@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { useResetPassword } from '../../hooks/auth/useResetPassword';
 
 const resetPasswordSchema = z
   .object({
@@ -35,11 +36,7 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // useEffect(() => {
-  //   // TODO: Implement API call to validate the token on component mount
-  //   // If token is invalid, show an error message or redirect
-  //   console.log('Validating token:', token);
-  // }, [token]);
+  const { submitResetPassword, isLoading, error, data, clearStatus } = useResetPassword();
 
   const {
     register,
@@ -51,29 +48,39 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
     mode: 'onTouched',
   });
 
-  const onSubmit = (data: ResetPasswordFormData) => {
-    console.log('Submitting new password with token:', token);
-    console.log('New password:', data.newPassword);
-    setIsSubmitted(true);
-    reset();
+  useEffect(() => {
+    return () => {
+      clearStatus();
+    };
+  }, [clearStatus, token]);
+
+  const onSubmit = async (formData: ResetPasswordFormData) => {
+    clearStatus();
+    try {
+      await submitResetPassword(token, formData.newPassword);
+      setIsSubmitted(true);
+      reset();
+    } catch (err) {
+      console.error('Password reset failed:', err);
+    }
   };
 
   const toggleShowPassword = () => setShowPassword(!showPassword);
   const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
-  if (isSubmitted) {
+  if (isSubmitted && data) {
     return (
       <div className="text-center space-y-4">
         <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
         <h3 className="text-lg font-medium text-gray-900">Passwort erfolgreich zurückgesetzt</h3>
         <p className="text-sm text-gray-600">
-          Sie können sich jetzt mit Ihrem neuen Passwort anmelden.
+          {data.message || 'Sie können sich mit dem neuen Passwort anmelden.'}
         </p>
         <Link
           to="/login"
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" // Стилизуем как кнопку
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
         >
-          Zum Login
+          Zur Login-Seite
         </Link>
       </div>
     );
@@ -81,6 +88,13 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {error && (
+        <div className="mb-4 p-3 border border-destructive/50 bg-destructive/10 text-destructive rounded flex items-center gap-2 text-sm">
+          <AlertCircle className="h-4 w-4" />
+          {error.message || 'Passwort konnte nicht zurückgesetzt werden.'}
+        </div>
+      )}
+
       <div>
         <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
           Neues Passwort
@@ -93,22 +107,24 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
             id="newPassword"
             type={showPassword ? 'text' : 'password'}
             {...register('newPassword')}
-            placeholder="Neues Passwort eingeben"
+            placeholder="Geben Sie ein neues Passwort ein"
             className="pl-9 pr-10 w-full"
             aria-invalid={errors.newPassword ? 'true' : 'false'}
+            disabled={isLoading}
+            onChange={() => error && clearStatus()}
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
               type="button"
               onClick={toggleShowPassword}
               className="text-gray-400 hover:text-gray-600 focus:outline-none"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+              disabled={isLoading}
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
         </div>
-
         {errors.newPassword && (
           <p className="mt-1 text-sm text-destructive" role="alert">
             {errors.newPassword.message}
@@ -128,9 +144,11 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             {...register('confirmPassword')}
-            placeholder="Neues Passwort wiederholen"
+            placeholder="Wiederholen Sie das neue Passwort"
             className="pl-9 pr-10 w-full"
             aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+            disabled={isLoading}
+            onChange={() => error && clearStatus()}
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
@@ -138,8 +156,11 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
               onClick={toggleShowConfirmPassword}
               className="text-gray-400 hover:text-gray-600 focus:outline-none"
               aria-label={
-                showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'
+                showConfirmPassword
+                  ? 'Bestätigungspasswort verbergen'
+                  : 'Bestätigungspasswort anzeigen'
               }
+              disabled={isLoading}
             >
               {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -153,8 +174,15 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
       </div>
 
       <div>
-        <Button type="submit" className="w-full" disabled={!isValid}>
-          Passwort speichern
+        <Button type="submit" className="w-full" disabled={!isValid || isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Speichern...
+            </>
+          ) : (
+            'Passwort speichern'
+          )}
         </Button>
       </div>
     </form>

@@ -6,8 +6,6 @@ const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
-  const displayToken = token || 'dummy-token-for-testing';
-
   return (
     <div className="flex flex-grow flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -16,8 +14,8 @@ const ResetPasswordPage: React.FC = () => {
         </div>
 
         <div className="bg-background p-8 border border-t-0 border-gray-200 rounded-lg shadow-md">
-          {displayToken ? (
-            <ResetPasswordForm token={displayToken} />
+          {token ? (
+            <ResetPasswordForm token={token} />
           ) : (
             <div className="text-center text-destructive space-y-4">
               <h3 className="text-lg font-medium">Ungültiger Link</h3>
