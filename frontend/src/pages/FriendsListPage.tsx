@@ -230,7 +230,7 @@ const FriendsListPage = () => {
     <div className="container-wrapper py-8">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold text-foreground">Meine Freunde</h1>
-        <Link to="/add-friend">
+        <Link to="/find-friends" className="flex items-center">
           <Button variant="link" className="text-base">
             <UserPlus className="mr-1 h-4 w-4" /> Neuer Freund
           </Button>
