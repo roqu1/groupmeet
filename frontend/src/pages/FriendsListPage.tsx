@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFriendsList } from '../hooks/friends/useFriendsList';
 import { useRemoveFriend } from '../hooks/friends/useRemoveFriend';
@@ -27,11 +27,14 @@ import { Loader2, AlertCircle, Search, UserPlus, Eye, UserX } from 'lucide-react
 import 'react-toastify/dist/ReactToastify.css';
 import { cn } from '../lib/utils';
 import { Friend } from '../types/friend';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const PAGE_SIZE = 6;
+const DEBOUNCE_DELAY = 500;
 
 const FriendsListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const [currentPage, setCurrentPage] = useState(0);
   const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
 
@@ -41,26 +44,16 @@ const FriendsListPage = () => {
     isError,
     error,
     isFetching,
-  } = useFriendsList({ page: currentPage, pageSize: PAGE_SIZE });
+  } = useFriendsList({ page: currentPage, pageSize: PAGE_SIZE, searchTerm: debouncedSearchTerm });
 
   const { mutate: removeFriendMutate, isPending: isRemovingFriend } = useRemoveFriend();
 
-  const filteredFriends = useMemo(() => {
-    const friends = friendsPage?.content ?? [];
-    if (!searchTerm) return friends;
-
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return friends.filter(
-      (friend) =>
-        friend.firstName.toLowerCase().includes(lowerCaseSearchTerm) ||
-        friend.lastName.toLowerCase().includes(lowerCaseSearchTerm) ||
-        friend.username.toLowerCase().includes(lowerCaseSearchTerm)
-    );
-  }, [friendsPage?.content, searchTerm]);
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [debouncedSearchTerm]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    setCurrentPage(0);
   };
 
   const confirmRemoveFriend = () => {
@@ -81,7 +74,7 @@ const FriendsListPage = () => {
   };
 
   const renderContent = () => {
-    if (isLoading && !friendsPage) {
+    if (isLoading && !friendsPage && !isFetching) {
       return (
         <div className="flex justify-center items-center mt-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -99,7 +92,7 @@ const FriendsListPage = () => {
       );
     }
 
-    const friendsToDisplay = filteredFriends;
+    const friendsToDisplay = friendsPage?.content ?? [];
     const totalPages = friendsPage?.totalPages ?? 0;
 
     if (friendsToDisplay.length === 0 && !isFetching) {
@@ -107,7 +100,7 @@ const FriendsListPage = () => {
         <div className="mt-10 text-center text-gray-500">
           {searchTerm
             ? 'Keine Freunde für deine Suche gefunden.'
-            : 'Sie haben noch keine Freunde in deiner Liste.'}
+            : 'Sie haben noch keine Freunde in ihrer Liste.'}
         </div>
       );
     }
@@ -116,7 +109,12 @@ const FriendsListPage = () => {
       <div
         className={cn('transition-opacity duration-300', isFetching ? 'opacity-70' : 'opacity-100')}
       >
-        <ul className="mt-4 space-y-3 min-h-[200px]">
+        <ul className="mt-4 space-y-3 min-h-[300px]">
+          {isLoading && isFetching && friendsToDisplay.length === 0 && (
+            <div className="flex justify-center items-center pt-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
           {friendsToDisplay.map((friend) => (
             <li
               key={friend.id}
@@ -179,7 +177,7 @@ const FriendsListPage = () => {
                         <span className="font-medium">
                           {friendToRemove?.firstName} {friendToRemove?.lastName}
                         </span>{' '}
-                        (@{friendToRemove?.username}) wirklich aus deiner Freundesliste entfernen?
+                        (@{friendToRemove?.username}) wirklich aus Ihrer Freundesliste entfernen?
                         Diese Aktion kann nicht rückgängig gemacht werden.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
