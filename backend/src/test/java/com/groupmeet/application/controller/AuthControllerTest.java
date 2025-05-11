@@ -49,6 +49,7 @@ import com.groupmeet.application.model.Gender;
 import com.groupmeet.application.model.User;
 import com.groupmeet.application.repository.UserRepository;
 import com.groupmeet.application.service.EmailService;
+import com.groupmeet.application.service.FriendService;
 import com.groupmeet.application.service.JwtService;
 import com.groupmeet.application.service.UserDetailsServiceImpl;
 import com.groupmeet.application.service.UserService;
@@ -88,6 +89,9 @@ class AuthControllerTest {
     @MockBean
     @Qualifier("passwordResetRateLimitCache")
     private Cache<String, Long> passwordResetRateLimitCache;
+
+    @MockBean
+    private FriendService friendService;
 
     private static final String REGISTER_URL = "/api/auth/register";
     private static final String LOGIN_URL = "/api/auth/login";
