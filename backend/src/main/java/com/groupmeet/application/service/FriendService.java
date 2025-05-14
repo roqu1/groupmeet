@@ -11,10 +11,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -94,6 +96,39 @@ public class FriendService {
             throw new FriendNotFoundException(
                     "Keine aktive Freundschaft mit Benutzer-ID gefunden: " + friendIdToRemove);
         }
+    }
+
+    @Transactional
+    public void sendFriendRequest(String currentUsername, Long targetUserId) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("Aktueller Benutzer nicht gefunden: " + currentUsername));
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new UsernameNotFoundException("Zielbenutzer nicht gefunden mit ID: " + targetUserId));
+
+        if (currentUser.getId().equals(targetUser.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Du kannst dir nicht selbst eine Freundschaftsanfrage senden.");
+        }
+
+        Optional<Friendship> existingFriendship = friendshipRepository
+            .findFriendshipBetweenUsersWithStatus(currentUser, targetUser, FriendshipStatus.ACCEPTED)
+            .or(() -> friendshipRepository.findFriendshipBetweenUsersWithStatus(currentUser, targetUser, FriendshipStatus.PENDING));
+
+        if (existingFriendship.isPresent()) {
+            Friendship fs = existingFriendship.get();
+            if (fs.getStatus() == FriendshipStatus.ACCEPTED) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ihr seid bereits Freunde.");
+            } else if (fs.getStatus() == FriendshipStatus.PENDING) {
+                 if (fs.getUserOne().getId().equals(currentUser.getId())) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Du hast diesem Benutzer bereits eine Anfrage gesendet.");
+                } else {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Dieser Benutzer hat dir bereits eine Anfrage gesendet.");
+                }
+            }
+        }
+
+        Friendship newRequest = new Friendship(currentUser, targetUser, FriendshipStatus.PENDING);
+        friendshipRepository.save(newRequest);
+        logger.info("Benutzer {} hat eine Freundschaftsanfrage an Benutzer {} (ID:{}) gesendet", currentUsername, targetUser.getUsername(), targetUserId);
     }
 
     public static class FriendNotFoundException extends RuntimeException {

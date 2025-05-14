@@ -1,5 +1,6 @@
 package com.groupmeet.application.controller;
 
+import com.groupmeet.application.controller.AuthController.MessageResponse;
 import com.groupmeet.application.dto.FriendDto;
 import com.groupmeet.application.service.FriendService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,9 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
 
 @RestController
 @RequestMapping("/api/friends")
@@ -48,6 +49,26 @@ public class FriendController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+    }
+
+    @PostMapping("/requests/{targetUserId}")
+    public ResponseEntity<?> sendFriendRequest(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long targetUserId) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            friendService.sendFriendRequest(userDetails.getUsername(), targetUserId);
+            return ResponseEntity.ok(new MessageResponse("Freundschaftsanfrage erfolgreich gesendet."));
+        } catch (UsernameNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(new AuthController.ErrorResponse(e.getReason()));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Fehler beim Senden der Freundschaftsanfrage.", e);
         }
     }
 }
