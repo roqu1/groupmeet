@@ -12,5 +12,7 @@ export const API_CONFIG = {
     resetPassword: '/api/auth/reset-password',
     friends: '/api/friends',
     friendById: (friendId: number | string): string => `/api/friends/${friendId}`,
+    userSearch: '/api/users/search',
+    sendFriendRequest: (targetUserId: number): string => `/api/friends/requests/${targetUserId}`,
   },
 } as const;

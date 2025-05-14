@@ -9,7 +9,7 @@ import { useRegister } from '../../hooks/auth/useRegister';
 
 const registerSchema = z
   .object({
-    gender: z.enum(['männlich', 'weiblich'], {
+    gender: z.enum(['männlich', 'weiblich', 'divers'], {
       required_error: 'Bitte wählen Sie Ihr Geschlecht aus',
     }),
     username: z.string().min(4, 'Benutzername ist erforderlich'),
@@ -88,6 +88,10 @@ const RegisterForm = () => {
           <label className="flex items-center space-x-2">
             <input type="radio" value="weiblich" {...register('gender')} className="h-4 w-4" />
             <span>weiblich</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input type="radio" value="divers" {...register('gender')} className="h-4 w-4" />
+            <span>divers</span>
           </label>
         </div>
         {errors.gender && <p className="text-destructive text-sm mt-1">{errors.gender.message}</p>}

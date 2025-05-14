@@ -1,34 +1,44 @@
-//import { API_CONFIG } from '../config/api';
+import { API_CONFIG } from '../config/api';
+import { getCookie } from '@/utils/cookies';
 
 interface SendFriendRequestResponse {
   message: string;
 }
 
-/**
- * STUB for sending a friend request to a user.
- * In the future, will make a POST request to a backend endpoint (e.g., API_CONFIG.endpoints.sendFriendRequest(userId))
- * @param {number} userId The ID of the user to send a friend request to.
- * @returns {Promise<SendFriendRequestResponse>} A promise resolving with the API response.
- */
 export const sendFriendRequest = async (userId: number): Promise<SendFriendRequestResponse> => {
-  // TODO:
-  // const endpoint = API_CONFIG.endpoints.sendFriendRequest(userId);
+  const endpoint = API_CONFIG.endpoints.sendFriendRequest(userId);
+  const url = `${API_CONFIG.baseUrl}${endpoint}`;
 
-  await new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (userId === 105) {
-        console.warn(
-          `[API STUB] Failed to send friend request to user ID: ${userId} (simulated error)`
-        );
-        reject(new Error('Benutzer kann keine Freundschaftsanfragen empfangen.'));
-      } else {
-        console.log(
-          `[API STUB] Friend request successfully sent to user ID: ${userId} (simulated)`
-        );
-        resolve({ message: 'Freundschaftsanfrage erfolgreich gesendet!' });
-      }
-    }, 1000);
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  } else {
+    console.warn(
+      'CSRF token (XSRF-TOKEN) not found in cookies for sendFriendRequest. Request might be rejected by backend.'
+    );
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    credentials: 'include',
   });
 
-  return { message: 'Freundschaftsanfrage erfolgreich gesendet!' };
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: 'Failed to parse error response' }));
+    throw {
+      message:
+        errorData.message || `Fehler beim Senden der Freundschaftsanfrage: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+
+  const data: SendFriendRequestResponse = await response.json();
+  return data;
 };

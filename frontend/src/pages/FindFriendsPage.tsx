@@ -1,16 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Combobox, ComboboxOption } from '@/components/ui/comboBox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import {
   Pagination,
   PaginationContent,
@@ -31,68 +21,94 @@ import { useUserSearch } from '@/hooks/users/useUserSearch';
 import { useSendFriendRequest } from '@/hooks/friend-requests/useSendFriendRequest';
 import { SearchUsersParams, UserSearchResult, Gender } from '@/types/user';
 import { cn } from '@/lib/utils';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useInterestOptions } from '@/hooks/options/useInterestOptions';
+import UserSearchFiltersPanel, { GenderSelection } from '@/components/users/UserSearchFiltersPanel';
 
-const locationOptions: ComboboxOption[] = [
-  { value: 'berlin', label: 'Berlin' },
-  { value: 'hamburg', label: 'Hamburg' },
-  { value: 'bremen', label: 'Bremen' },
-  { value: 'munich', label: 'München' },
-  { value: 'cologne', label: 'Köln' },
-  { value: 'frankfurt', label: 'Frankfurt' },
-];
-
-const ageOptions: ComboboxOption[] = Array.from({ length: 83 }, (_, i) => ({
-  value: (i + 18).toString(),
-  label: (i + 18).toString(),
-}));
-
-const interestOptions: MultiSelectOption[] = [
-  { value: 'sport', label: 'Sport' },
-  { value: 'musik', label: 'Musik' },
-  { value: 'reisen', label: 'Reisen' },
-  { value: 'kochen', label: 'Kochen' },
-  { value: 'filme', label: 'Filme' },
-  { value: 'lesen', label: 'Lesen' },
-  { value: 'technologie', label: 'Technologie' },
-  { value: 'kunst', label: 'Kunst' },
-];
-
-const FILTERS_STORAGE_KEY = 'findFriendsFilters';
 const DEFAULT_PAGE_SIZE = 5;
-const MIN_CARD_HEIGHT_PX = 80;
 
-interface GenderSelection {
-  male: boolean;
-  female: boolean;
-  divers: boolean;
-}
+const initialUiFiltersState: {
+  genders: GenderSelection;
+  location: string;
+  interests: string[];
+  searchTerm: string;
+} = {
+  genders: { MALE: false, FEMALE: false, DIVERS: false },
+  location: '',
+  interests: [],
+  searchTerm: '',
+};
+
+const buildActualSearchParams = (
+  currentSearchTerm: string,
+  currentGenders: GenderSelection,
+  currentLocation: string,
+  currentInterests: string[],
+  currentPageForApi: number
+): SearchUsersParams => {
+  const params: SearchUsersParams = {
+    page: currentPageForApi,
+    size: DEFAULT_PAGE_SIZE,
+    searchTerm: currentSearchTerm.trim() || undefined,
+    genders: (Object.keys(currentGenders) as Array<keyof GenderSelection>)
+      .filter((key) => currentGenders[key])
+      .map((key) => key.toUpperCase() as Gender),
+    location: currentLocation || undefined,
+    interests: currentInterests.length > 0 ? currentInterests : undefined,
+  };
+  Object.keys(params).forEach((keyStr) => {
+    const key = keyStr as keyof SearchUsersParams;
+    if (
+      params[key] === undefined ||
+      (Array.isArray(params[key]) && (params[key] as unknown[]).length === 0)
+    ) {
+      delete params[key];
+    }
+  });
+  return params;
+};
 
 const FindFriendsPage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGenders, setSelectedGenders] = useState<GenderSelection>({
-    male: false,
-    female: false,
-    divers: false,
-  });
-  const [selectedLocation, setSelectedLocation] = useState<string>('');
-  const [selectedMinAge, setSelectedMinAge] = useState<string>('');
-  const [selectedMaxAge, setSelectedMaxAge] = useState<string>('');
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [uiSearchTerm, setUiSearchTerm] = useState(initialUiFiltersState.searchTerm);
+  const [uiSelectedGenders, setUiSelectedGenders] = useState<GenderSelection>(
+    initialUiFiltersState.genders
+  );
+  const [uiSelectedLocation, setUiSelectedLocation] = useState<string>(
+    initialUiFiltersState.location
+  );
+  const [uiSelectedInterests, setUiSelectedInterests] = useState<string[]>(
+    initialUiFiltersState.interests
+  );
 
-  const [activeSearchParams, setActiveSearchParams] = useState<SearchUsersParams>({
-    page: 0,
-    size: DEFAULT_PAGE_SIZE,
+  const debouncedUiSearchTerm = useDebounce(uiSearchTerm, 500);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const [appliedSearchParams, setAppliedSearchParams] = useState<SearchUsersParams>(() => {
+    return buildActualSearchParams(
+      initialUiFiltersState.searchTerm,
+      initialUiFiltersState.genders,
+      initialUiFiltersState.location,
+      initialUiFiltersState.interests,
+      0
+    );
   });
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const {
     data: searchData,
-    isLoading,
-    isFetching,
-    isError,
-    error,
-  } = useUserSearch(activeSearchParams, true);
+    isLoading: isLoadingSearchData,
+    isFetching: isFetchingSearchData,
+    isError: isErrorSearch,
+    error: searchError,
+  } = useUserSearch(appliedSearchParams, true);
+
+  const {
+    data: interestOptionsData,
+    isLoading: isLoadingInterests,
+    isError: isErrorInterests,
+  } = useInterestOptions();
+  const interestOptions = useMemo(() => interestOptionsData || [], [interestOptionsData]);
 
   const searchResults = useMemo(() => searchData?.content ?? [], [searchData]);
   const paginationInfo = useMemo(
@@ -112,289 +128,108 @@ const FindFriendsPage = () => {
     }
   );
 
-  const initialUiFiltersState: {
-    genders: GenderSelection;
-    location: string;
-    minAge: string;
-    maxAge: string;
-    interests: string[];
-  } = {
-    genders: { male: false, female: false, divers: false },
-    location: '',
-    minAge: '',
-    maxAge: '',
-    interests: [],
-  };
-
-  const triggerSearch = (
-    currentUiFilters: Partial<typeof initialUiFiltersState>,
-    currentSearchTerm: string,
-    page: number = 0
-  ) => {
-    const {
-      genders: uiGenders,
-      location: uiLocation,
-      minAge: uiMinAge,
-      maxAge: uiMaxAge,
-      interests: uiInterests,
-    } = currentUiFilters;
-    const activeGenders = uiGenders ?? selectedGenders;
-    const activeLocation = uiLocation ?? selectedLocation;
-    const activeMinAge = uiMinAge ?? selectedMinAge;
-    const activeMaxAge = uiMaxAge ?? selectedMaxAge;
-    const activeInterests = uiInterests ?? selectedInterests;
-
-    const params: SearchUsersParams = {
-      page: page,
-      size: DEFAULT_PAGE_SIZE,
-      searchTerm: currentSearchTerm.trim() || undefined,
-      genders: (Object.keys(activeGenders) as Array<keyof GenderSelection>)
-        .filter((key) => activeGenders[key])
-        .map((key) => key.toUpperCase() as Gender),
-      location: activeLocation || undefined,
-      minAge: activeMinAge ? parseInt(activeMinAge, 10) : undefined,
-      maxAge: activeMaxAge ? parseInt(activeMaxAge, 10) : undefined,
-      interests: activeInterests.length > 0 ? activeInterests : undefined,
-    };
-
-    const cleanedParams = Object.entries(params).reduce((acc, [key, value]) => {
-      if (value !== undefined && !(Array.isArray(value) && value.length === 0)) {
-        acc[key as keyof SearchUsersParams] = value;
+  useEffect(() => {
+    if (interestOptions.length > 0 && uiSelectedInterests.length > 0) {
+      const valid = uiSelectedInterests.filter((si) =>
+        interestOptions.some((opt) => opt.value === si)
+      );
+      if (valid.length !== uiSelectedInterests.length) {
+        setUiSelectedInterests(valid);
       }
-      return acc;
-    }, {} as SearchUsersParams);
-
-    console.log('Triggering search with cleaned params:', cleanedParams);
-    setActiveSearchParams(cleanedParams);
-  };
+    }
+  }, [interestOptions, uiSelectedInterests]);
 
   useEffect(() => {
-    console.log('EFFECT: Loading initial filters');
-    const savedFiltersJson = localStorage.getItem(FILTERS_STORAGE_KEY);
-    let filtersToApply = initialUiFiltersState;
-    if (savedFiltersJson) {
-      try {
-        const parsedFilters = JSON.parse(savedFiltersJson);
-        filtersToApply = {
-          ...initialUiFiltersState,
-          ...parsedFilters,
-          genders: { ...initialUiFiltersState.genders, ...(parsedFilters.genders || {}) },
-        };
-      } catch (e) {
-        console.error('Failed to parse saved filters:', e);
-        localStorage.removeItem(FILTERS_STORAGE_KEY);
-      }
+    const newDebouncedTrimmedSearchTerm = debouncedUiSearchTerm.trim();
+    const currentAppliedSearchTerm = appliedSearchParams?.searchTerm || '';
+
+    if (newDebouncedTrimmedSearchTerm !== currentAppliedSearchTerm) {
+      const newParams = buildActualSearchParams(
+        newDebouncedTrimmedSearchTerm,
+        uiSelectedGenders,
+        uiSelectedLocation,
+        uiSelectedInterests,
+        0
+      );
+      setAppliedSearchParams(newParams);
     }
-    setSelectedGenders(filtersToApply.genders);
-    setSelectedLocation(filtersToApply.location);
-    setSelectedMinAge(filtersToApply.minAge);
-    setSelectedMaxAge(filtersToApply.maxAge);
-    setSelectedInterests(filtersToApply.interests);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedUiSearchTerm]);
 
-    const initialSearchTerm = '';
-    const initialGenders = (Object.keys(filtersToApply.genders) as Array<keyof GenderSelection>)
-      .filter((key) => filtersToApply.genders[key])
-      .map((key) => key.toUpperCase() as Gender);
-    const initialParams: SearchUsersParams = {
-      page: 0,
-      size: DEFAULT_PAGE_SIZE,
-      searchTerm: initialSearchTerm || undefined,
-      genders: initialGenders.length > 0 ? initialGenders : undefined,
-      location: filtersToApply.location || undefined,
-      minAge: filtersToApply.minAge ? parseInt(filtersToApply.minAge, 10) : undefined,
-      maxAge: filtersToApply.maxAge ? parseInt(filtersToApply.maxAge, 10) : undefined,
-      interests: filtersToApply.interests.length > 0 ? filtersToApply.interests : undefined,
-    };
-
-    const cleanedInitialParams = Object.entries(initialParams).reduce((acc, [key, value]) => {
-      if (value !== undefined) {
-        acc[key as keyof SearchUsersParams] = value;
-      }
-      return acc;
-    }, {} as SearchUsersParams);
-
-    console.log('EFFECT: Setting initial activeSearchParams:', cleanedInitialParams);
-    setActiveSearchParams(cleanedInitialParams);
+  const handleGenderChange = useCallback((genderId: Gender, checked: boolean | 'indeterminate') => {
+    if (typeof checked === 'boolean') {
+      setUiSelectedGenders((prev) => ({ ...prev, [genderId]: checked }));
+    }
   }, []);
 
-  const handleGenderChange = (
-    genderKey: keyof GenderSelection,
-    checked: boolean | 'indeterminate'
-  ) => {
-    if (typeof checked === 'boolean') {
-      setSelectedGenders((prev) => ({ ...prev, [genderKey]: checked }));
-    }
-  };
+  const stableSetUiSelectedLocation = useCallback(
+    (value: string) => setUiSelectedLocation(value),
+    []
+  );
 
-  const handleResetFilters = () => {
-    setSearchTerm('');
-    setSelectedGenders(initialUiFiltersState.genders);
-    setSelectedLocation(initialUiFiltersState.location);
-    setSelectedMinAge(initialUiFiltersState.minAge);
-    setSelectedMaxAge(initialUiFiltersState.maxAge);
-    setSelectedInterests(initialUiFiltersState.interests);
-    localStorage.removeItem(FILTERS_STORAGE_KEY);
-    triggerSearch(initialUiFiltersState, '', 0);
-  };
-
-  const handleSaveChangesAndSearch = () => {
-    const filtersToSave = {
-      genders: selectedGenders,
-      location: selectedLocation,
-      minAge: selectedMinAge,
-      maxAge: selectedMaxAge,
-      interests: selectedInterests,
-    };
-    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filtersToSave));
-    triggerSearch({}, searchTerm, 0);
-    if (window.innerWidth < 1024) {
-      setIsFiltersOpen(false);
+  const handleApplyFiltersAndSearch = useCallback(() => {
+    const newParams = buildActualSearchParams(
+      uiSearchTerm,
+      uiSelectedGenders,
+      uiSelectedLocation,
+      uiSelectedInterests,
+      0
+    );
+    setAppliedSearchParams(newParams);
+    if (window.innerWidth < 1024) setIsFiltersOpen(false);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
     }
-  };
+  }, [uiSearchTerm, uiSelectedGenders, uiSelectedLocation, uiSelectedInterests]);
+
+  const handleResetFilters = useCallback(() => {
+    setUiSearchTerm(initialUiFiltersState.searchTerm);
+    setUiSelectedGenders(initialUiFiltersState.genders);
+    setUiSelectedLocation(initialUiFiltersState.location);
+    setUiSelectedInterests(initialUiFiltersState.interests);
+
+    const resetParams = buildActualSearchParams(
+      initialUiFiltersState.searchTerm,
+      initialUiFiltersState.genders,
+      initialUiFiltersState.location,
+      initialUiFiltersState.interests,
+      0
+    );
+    setAppliedSearchParams(resetParams);
+    if (window.innerWidth < 1024) setIsFiltersOpen(false);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
 
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 0 && newPage < paginationInfo.totalPages) {
-      setActiveSearchParams((prevParams: SearchUsersParams) => ({ ...prevParams, page: newPage }));
+    if (
+      newPage >= 0 &&
+      newPage < (paginationInfo.totalPages || 1) &&
+      newPage !== paginationInfo.currentPage
+    ) {
+      const newParams = buildActualSearchParams(
+        uiSearchTerm,
+        uiSelectedGenders,
+        uiSelectedLocation,
+        uiSelectedInterests,
+        newPage
+      );
+      setAppliedSearchParams(newParams);
     }
   };
 
   const handleAddFriend = (userId: number) => {
-    if (isSendingRequest && actionInProgressUserId === userId) return;
+    if (actionInProgressUserId === userId || isSendingRequest) return;
     setActionInProgressUserId(userId);
     sendFriendRequestMutate(userId);
   };
 
-  const listMinHeight = DEFAULT_PAGE_SIZE * MIN_CARD_HEIGHT_PX;
+  const MIN_LIST_HEIGHT_REM = DEFAULT_PAGE_SIZE * 5;
+  const listMinHeight = searchResults.length > 0 ? 'auto' : `${MIN_LIST_HEIGHT_REM}rem`;
 
-  const FiltersPanelCoreContent = () => (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Geschlecht</label>
-        <div className="flex items-center space-x-4 flex-wrap">
-          <div className="flex items-center space-x-2 mb-2 sm:mb-0">
-            <Checkbox
-              id="gender-male"
-              checked={selectedGenders.male}
-              onCheckedChange={(checked) => handleGenderChange('male', checked)}
-              disabled={isFetching}
-            />
-            <label htmlFor="gender-male" className="text-sm font-medium leading-none">
-              Männlich
-            </label>
-          </div>
-          <div className="flex items-center space-x-2 mb-2 sm:mb-0">
-            <Checkbox
-              id="gender-female"
-              checked={selectedGenders.female}
-              onCheckedChange={(checked) => handleGenderChange('female', checked)}
-              disabled={isFetching}
-            />
-            <label htmlFor="gender-female" className="text-sm font-medium leading-none">
-              Weiblich
-            </label>
-          </div>
-          <div className="flex items-center space-x-2 mb-2 sm:mb-0">
-            <Checkbox
-              id="gender-divers"
-              checked={selectedGenders.divers}
-              onCheckedChange={(checked) => handleGenderChange('divers', checked)}
-              disabled={isFetching}
-            />
-            <label htmlFor="gender-divers" className="text-sm font-medium leading-none">
-              Divers
-            </label>
-          </div>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="location-combo" className="block text-sm font-medium mb-1">
-          Ort
-        </label>
-        <Combobox
-          options={locationOptions}
-          value={selectedLocation}
-          onSelect={setSelectedLocation}
-          placeholder="Ort suchen oder wählen..."
-          emptyMessage="Kein Ort gefunden."
-          id="location-combo"
-          disabled={isFetching}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Alter</label>
-        <div className="flex gap-2">
-          <Select value={selectedMinAge} onValueChange={setSelectedMinAge} disabled={isFetching}>
-            <SelectTrigger aria-label="Mindestalter">
-              <SelectValue placeholder="Min" />
-            </SelectTrigger>
-            <SelectContent>
-              {ageOptions.map((option) => (
-                <SelectItem
-                  key={`min-${option.value}`}
-                  value={option.value}
-                  disabled={
-                    !!selectedMaxAge &&
-                    selectedMaxAge !== '' &&
-                    parseInt(option.value) > parseInt(selectedMaxAge)
-                  }
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedMaxAge} onValueChange={setSelectedMaxAge} disabled={isFetching}>
-            <SelectTrigger aria-label="Maximalalter">
-              <SelectValue placeholder="Max" />
-            </SelectTrigger>
-            <SelectContent>
-              {ageOptions.map((option) => (
-                <SelectItem
-                  key={`max-${option.value}`}
-                  value={option.value}
-                  disabled={
-                    !!selectedMinAge &&
-                    selectedMinAge !== '' &&
-                    parseInt(option.value) < parseInt(selectedMinAge)
-                  }
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="interests-select" className="block text-sm font-medium mb-1">
-          Interessen
-        </label>
-        <MultiSelect
-          options={interestOptions}
-          selected={selectedInterests}
-          onValueChange={setSelectedInterests}
-          placeholder="Interessen wählen..."
-          className="w-full"
-          id="interests-select"
-          disabled={isFetching}
-        />
-      </div>
-      <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t mt-4">
-        <Button onClick={handleSaveChangesAndSearch} className="flex-1" disabled={isFetching}>
-          {isFetching && !isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{' '}
-          Speichern & Suchen
-        </Button>
-        <Button
-          onClick={handleResetFilters}
-          variant="outline"
-          className="flex-1"
-          disabled={isFetching}
-        >
-          Filter zurücksetzen
-        </Button>
-      </div>
-    </div>
-  );
+  const isSearchInputDisabled = isLoadingSearchData || isLoadingInterests;
+  const areOtherFiltersDisabled = isFetchingSearchData || isLoadingInterests;
 
   return (
     <div className="container-wrapper py-8">
@@ -405,13 +240,13 @@ const FindFriendsPage = () => {
             <Search className="h-4 w-4 text-muted-foreground" />
           </div>
           <Input
+            ref={searchInputRef}
             type="search"
             placeholder="Suchen nach Benutzername, Vorname, Nachname..."
             className="pl-9 w-full"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSaveChangesAndSearch()}
-            disabled={isFetching}
+            value={uiSearchTerm}
+            onChange={(e) => setUiSearchTerm(e.target.value)}
+            disabled={isSearchInputDisabled}
           />
         </div>
 
@@ -422,6 +257,7 @@ const FindFriendsPage = () => {
             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
             aria-expanded={isFiltersOpen}
             aria-controls="filters-panel-mobile"
+            disabled={areOtherFiltersDisabled}
           >
             <div className="flex items-center">
               <FilterIcon className="mr-2 h-4 w-4" />
@@ -435,30 +271,45 @@ const FindFriendsPage = () => {
           </Button>
           {isFiltersOpen && (
             <div id="filters-panel-mobile" className="mt-4 p-4 border rounded-lg bg-card shadow-sm">
-              <FiltersPanelCoreContent />
+              <UserSearchFiltersPanel
+                uiSelectedGenders={uiSelectedGenders}
+                handleGenderChange={handleGenderChange}
+                uiSelectedLocation={uiSelectedLocation}
+                setUiSelectedLocation={stableSetUiSelectedLocation}
+                uiSelectedInterests={uiSelectedInterests}
+                setUiSelectedInterests={setUiSelectedInterests}
+                interestOptions={interestOptions}
+                isLoadingInterests={isLoadingInterests}
+                isErrorInterests={isErrorInterests}
+                isUIDisabled={areOtherFiltersDisabled}
+                onApplyFilters={handleApplyFiltersAndSearch}
+                onResetFilters={handleResetFilters}
+              />
             </div>
           )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2 space-y-6">
-            {isError && (
+            {isErrorSearch && !isLoadingSearchData && (
               <div className="p-4 border border-destructive/50 bg-destructive/10 text-destructive rounded flex items-center gap-2 text-sm">
                 <AlertCircle className="h-4 w-4" />
-                {error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten.'}
+                {searchError instanceof Error
+                  ? searchError.message
+                  : 'Ein unbekannter Fehler ist aufgetreten.'}
               </div>
             )}
             <div
               className={cn(
                 'space-y-3 transition-opacity duration-300',
-                isFetching && !isLoading ? 'opacity-60' : 'opacity-100'
+                isFetchingSearchData && !isLoadingSearchData ? 'opacity-60' : 'opacity-100'
               )}
-              style={{ minHeight: `${listMinHeight}px` }}
+              style={{ minHeight: listMinHeight }}
             >
-              {isLoading ? (
+              {isLoadingSearchData ? (
                 <div
                   className="flex justify-center items-center pt-10"
-                  style={{ height: `${listMinHeight}px` }}
+                  style={{ height: listMinHeight }}
                 >
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -471,22 +322,22 @@ const FindFriendsPage = () => {
                     isAddingFriend={isSendingRequest && actionInProgressUserId === user.id}
                   />
                 ))
-              ) : !isError && !isLoading ? (
+              ) : !isErrorSearch ? (
                 <div
                   className="flex justify-center items-center pt-10 text-muted-foreground"
-                  style={{ height: `${listMinHeight}px` }}
+                  style={{ height: listMinHeight }}
                 >
                   Keine Benutzer gefunden. Ändern Sie die Filter oder den Suchbegriff.
                 </div>
               ) : null}
             </div>
-            {!isLoading && !isError && searchData && searchData.totalPages > 1 && (
+            {!isLoadingSearchData && !isErrorSearch && searchData && searchData.totalPages > 1 && (
               <Pagination className="mt-6">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={() => handlePageChange(paginationInfo.currentPage - 1)}
-                      disabled={paginationInfo.isFirst || isFetching}
+                      disabled={paginationInfo.isFirst || isFetchingSearchData}
                     />
                   </PaginationItem>
                   <PaginationItem>
@@ -497,7 +348,7 @@ const FindFriendsPage = () => {
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => handlePageChange(paginationInfo.currentPage + 1)}
-                      disabled={paginationInfo.isLast || isFetching}
+                      disabled={paginationInfo.isLast || isFetchingSearchData}
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -506,9 +357,22 @@ const FindFriendsPage = () => {
           </div>
 
           <div className="hidden lg:block lg:col-span-1">
-            <div className="sticky top-[2.5rem] p-4 border rounded-lg bg-card shadow-sm">
+            <div className="sticky top-[calc(theme(space.14)_+_1rem)] p-4 border rounded-lg bg-card shadow-sm">
               <h2 className="text-xl font-semibold border-b pb-3 mb-4">Filterung</h2>
-              <FiltersPanelCoreContent />
+              <UserSearchFiltersPanel
+                uiSelectedGenders={uiSelectedGenders}
+                handleGenderChange={handleGenderChange}
+                uiSelectedLocation={uiSelectedLocation}
+                setUiSelectedLocation={stableSetUiSelectedLocation}
+                uiSelectedInterests={uiSelectedInterests}
+                setUiSelectedInterests={setUiSelectedInterests}
+                interestOptions={interestOptions}
+                isLoadingInterests={isLoadingInterests}
+                isErrorInterests={isErrorInterests}
+                isUIDisabled={areOtherFiltersDisabled}
+                onApplyFilters={handleApplyFiltersAndSearch}
+                onResetFilters={handleResetFilters}
+              />
             </div>
           </div>
         </div>

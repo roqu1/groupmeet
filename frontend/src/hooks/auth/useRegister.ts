@@ -4,7 +4,7 @@ import { API_CONFIG } from '../../config/api';
 
 // Registration data types
 export interface RegisterFormData {
-  gender: 'männlich' | 'weiblich';
+  gender: 'männlich' | 'weiblich' | 'divers';
   firstName: string;
   lastName: string;
   username: string;
