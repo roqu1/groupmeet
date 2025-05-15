@@ -2,7 +2,8 @@ package com.groupmeet.application.model;
 
 public enum Gender {
     MALE("männlich"),
-    FEMALE("weiblich");
+    FEMALE("weiblich"),
+    DIVERS("divers");
 
     private final String displayName;
 
@@ -16,10 +17,15 @@ public enum Gender {
 
     public static Gender fromDisplayName(String displayName) {
         for (Gender gender : values()) {
-            if (gender.getDisplayName().equals(displayName)) {
+            if (gender.getDisplayName().equalsIgnoreCase(displayName)) {
                 return gender;
             }
         }
-        throw new IllegalArgumentException("Unknown gender: " + displayName);
+
+        try {
+            return Gender.valueOf(displayName.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unknown gender: " + displayName);
+        }
     }
 }

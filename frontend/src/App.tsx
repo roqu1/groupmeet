@@ -9,6 +9,7 @@ import PublicOnlyRoute from './components/PublicOnlyRoute';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import FriendsListPage from './pages/FriendsListPage';
+import FindFriendsPage from './pages/FindFriendsPage';
 import { ToastContainer } from 'react-toastify';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/friends" element={<FriendsListPage />} />
+            <Route path="/find-friends" element={<FindFriendsPage />} />
           </Route>
 
           {/* ToDo: Not found page */}

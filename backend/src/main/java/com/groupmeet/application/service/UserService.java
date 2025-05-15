@@ -8,15 +8,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import com.google.common.cache.Cache;
 import com.groupmeet.application.dto.UserRegistrationDto;
+import com.groupmeet.application.dto.UserSearchQueryCriteria;
+import com.groupmeet.application.dto.UserSearchResultDto;
 import com.groupmeet.application.exception.RateLimitException;
+import com.groupmeet.application.model.Friendship;
+import com.groupmeet.application.model.FriendshipStatus;
+import com.groupmeet.application.model.Interest;
 import com.groupmeet.application.model.User;
+import com.groupmeet.application.repository.FriendshipRepository;
+import com.groupmeet.application.repository.InterestRepository;
 import com.groupmeet.application.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
+import com.groupmeet.application.repository.InterestRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.groupmeet.application.model.Interest;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -36,6 +53,12 @@ public class UserService {
     @Autowired
     @Qualifier("passwordResetRateLimitCache")
     private Cache<String, Long> passwordResetRateLimitCache;
+
+    @Autowired
+    private FriendshipRepository friendshipRepository;
+
+    @Autowired
+    private InterestRepository interestRepository;
 
     @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
@@ -144,5 +167,49 @@ public class UserService {
         userRepository.save(user);
         logger.info("Passwort für Benutzer '{}' erfolgreich zurückgesetzt.", username);
 
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserSearchResultDto> searchUsers(UserSearchQueryCriteria criteria, String currentUsername, Pageable pageable) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + currentUsername));
+
+        Page<User> usersPage = userRepository.searchUsers(criteria, currentUser.getId(), pageable);
+
+        return usersPage.map(user -> {
+            String friendshipStatusString = "NONE";
+            Optional<Friendship> friendshipOpt = friendshipRepository.findFriendshipBetweenUsersWithStatus(currentUser, user, FriendshipStatus.ACCEPTED)
+                    .or(() -> friendshipRepository.findFriendshipBetweenUsersWithStatus(currentUser, user, FriendshipStatus.PENDING));
+
+            if (friendshipOpt.isPresent()) {
+                Friendship friendship = friendshipOpt.get();
+                if (friendship.getStatus() == FriendshipStatus.ACCEPTED) {
+                    friendshipStatusString = "FRIENDS";
+                } else if (friendship.getStatus() == FriendshipStatus.PENDING) {
+                    if (friendship.getUserOne().getId().equals(currentUser.getId())) {
+                        friendshipStatusString = "REQUEST_SENT";
+                    } else {
+                        friendshipStatusString = "REQUEST_RECEIVED";
+                    }
+                }
+            }
+            return UserSearchResultDto.fromUser(user, friendshipStatusString);
+        });
+    }
+
+    @Transactional
+    public User addInterestsToUser(String username, List<String> interestNames) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + username));
+        
+        Set<Interest> interests = interestRepository.findByNameInIgnoreCase(interestNames);
+        for (String name : interestNames) {
+            if (interests.stream().noneMatch(i -> i.getName().equalsIgnoreCase(name))) {
+                Interest newInterest = interestRepository.save(new Interest(name));
+                interests.add(newInterest);
+            }
+        }
+        user.setInterests(interests);
+        return userRepository.save(user);
     }
 }
