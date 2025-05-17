@@ -96,19 +96,30 @@ const LoginForm = () => {
           Passwort
         </label>
         <div className="relative rounded-md shadow-sm">
+          {' '}
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Lock className="h-4 w-4 text-gray-400" />
-          </div>
+          </div>{' '}
           <Input
             id="password"
             type={showPassword ? 'text' : 'password'}
-            {...register('password')}
+            {...register('password', {
+              onChange: () => {
+                clearError();
+              },
+            })}
             placeholder="Passwort"
             className="pl-9 pr-10 w-full"
             aria-invalid={errors.password ? 'true' : 'false'}
-            onChange={() => error && clearError()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit((data) => {
+                  onSubmit(data);
+                })();
+              }
+            }}
           />
-
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
               type="button"
