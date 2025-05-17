@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "fileSystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${workspaceFolder}"
+      ],
+      "env": {}
+    }
+  }
+}
