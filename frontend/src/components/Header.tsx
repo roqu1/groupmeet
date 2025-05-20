@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLogout } from '../hooks/auth/useLogout';
 import { Button } from './ui/button';
-import { LogOut, UserCircle, Loader2, Users } from 'lucide-react';
+import { LogOut, UserCircle, Loader2, Users, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
 
 export default function Header() {
   const { isAuthenticated, currentUser, isLoading: isAuthLoading } = useAuth();
   const { logoutUser, isLoading: isLogoutLoading } = useLogout();
+  const { setTheme, effectiveTheme } = useTheme();
 
   const handleLogout = async () => {
     try {
@@ -16,6 +18,10 @@ export default function Header() {
     }
   };
 
+  const toggleTheme = () => {
+    setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
+  };
+
   return (
     <header className="border-b bg-background sticky top-0 z-50">
       <div className="container-wrapper flex h-14 items-center justify-between">
@@ -23,11 +29,12 @@ export default function Header() {
           GroupMeet
         </Link>
 
-        <nav>
+        <nav className="flex items-center gap-2 sm:gap-4">
+          {' '}
           {isAuthLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : isAuthenticated && currentUser ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Hallo, {currentUser.firstName}!
               </span>
@@ -72,6 +79,17 @@ export default function Header() {
               </Button>
             </div>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={
+              effectiveTheme === 'dark' ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren'
+            }
+            title={effectiveTheme === 'dark' ? 'Helles Design' : 'Dunkles Design'}
+          >
+            {effectiveTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
         </nav>
       </div>
     </header>
