@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.groupmeet.application.model.Location;
+import com.groupmeet.application.repository.LocationRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,6 +19,9 @@ public class InterestController {
 
     @Autowired
     private InterestRepository interestRepository;
+
+    @Autowired
+    private LocationRepository locationRepository;
 
     public static class OptionDto {
         private String value;
@@ -38,5 +43,14 @@ public class InterestController {
                 .map(interest -> new OptionDto(interest.getName(), interest.getName()))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(interestOptions);
+    }
+    @GetMapping("/locations")
+    public ResponseEntity<List<OptionDto>> getAvailableLocations() {
+        List<Location> locations = locationRepository.findAll();
+        List<OptionDto> locationOptions = locations.stream()
+                .sorted((l1, l2) -> l1.getName().compareToIgnoreCase(l2.getName()))
+                .map(location -> new OptionDto(location.getName(), location.getName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(locationOptions);
     }
 }

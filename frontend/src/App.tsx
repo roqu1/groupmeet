@@ -12,6 +12,7 @@ import FriendsListPage from './pages/FriendsListPage';
 import FindFriendsPage from './pages/FindFriendsPage';
 import { ToastContainer } from 'react-toastify';
 import UserProfilePage from './pages/UserProfilePage';
+import EditProfilePage from './pages/EditProfilePage';
 import FriendRequestsPage from './pages/FriendRequestsPage';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
             <Route path="/friends" element={<FriendsListPage />} />
             <Route path="/find-friends" element={<FindFriendsPage />} />
             <Route path="/profile/:userId" element={<UserProfilePage />} />
+            <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/friend-requests" element={<FriendRequestsPage />} />
           </Route>
 
