@@ -1,6 +1,7 @@
 package com.groupmeet.application.service;
 
 import com.groupmeet.application.dto.FriendDto;
+import com.groupmeet.application.dto.FriendRequestDto;
 import com.groupmeet.application.model.Friendship;
 import com.groupmeet.application.model.FriendshipStatus;
 import com.groupmeet.application.model.User;
@@ -58,14 +59,12 @@ public class FriendService {
                 friendshipsPage.getTotalPages());
 
         final User finalCurrentUser = currentUser;
-        Page<User> friendUsersPage = friendshipsPage.map(friendship -> {
-            if (Objects.equals(friendship.getUserOne().getId(), finalCurrentUser.getId())) {
-                return friendship.getUserTwo();
-            }
-            return friendship.getUserOne();
+        return friendshipsPage.map(friendship -> {
+            User friendUser = Objects.equals(friendship.getUserOne().getId(), finalCurrentUser.getId())
+                    ? friendship.getUserTwo()
+                    : friendship.getUserOne();
+            return FriendDto.fromUser(friendUser);
         });
-
-        return friendUsersPage.map(FriendDto::fromUser);
     }
 
     @Transactional
@@ -110,8 +109,7 @@ public class FriendService {
         }
 
         Optional<Friendship> existingFriendship = friendshipRepository
-            .findFriendshipBetweenUsersWithStatus(currentUser, targetUser, FriendshipStatus.ACCEPTED)
-            .or(() -> friendshipRepository.findFriendshipBetweenUsersWithStatus(currentUser, targetUser, FriendshipStatus.PENDING));
+            .findFriendshipBetweenUsers(currentUser, targetUser);
 
         if (existingFriendship.isPresent()) {
             Friendship fs = existingFriendship.get();
@@ -121,8 +119,13 @@ public class FriendService {
                  if (fs.getUserOne().getId().equals(currentUser.getId())) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Du hast diesem Benutzer bereits eine Anfrage gesendet.");
                 } else {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Dieser Benutzer hat dir bereits eine Anfrage gesendet.");
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Dieser Benutzer hat dir bereits eine Anfrage gesendet. Du kannst sie annehmen.");
                 }
+            } else if (fs.getStatus() == FriendshipStatus.DECLINED || fs.getStatus() == FriendshipStatus.BLOCKED) {
+                 if(fs.getStatus() == FriendshipStatus.DECLINED) friendshipRepository.delete(fs);
+                 else if (fs.getStatus() == FriendshipStatus.BLOCKED) {
+                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Interaktion mit diesem Benutzer ist nicht möglich.");
+                 }
             }
         }
 
@@ -131,8 +134,79 @@ public class FriendService {
         logger.info("Benutzer {} hat eine Freundschaftsanfrage an Benutzer {} (ID:{}) gesendet", currentUsername, targetUser.getUsername(), targetUserId);
     }
 
+    @Transactional(readOnly = true)
+    public Page<FriendRequestDto> getIncomingFriendRequests(String currentUsername, Pageable pageable) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + currentUsername));
+
+        Page<Friendship> pendingFriendships = friendshipRepository.findByUserTwoAndStatusOrderByCreatedAtDesc(currentUser, FriendshipStatus.PENDING, pageable);
+        
+        return pendingFriendships.map(friendship -> 
+            new FriendRequestDto(
+                friendship.getId(), 
+                friendship.getUserOne(),
+                friendship.getCreatedAt()
+            )
+        );
+    }
+
+    @Transactional
+    public void acceptFriendRequest(String currentUsername, Long requestId) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + currentUsername));
+
+        Friendship friendship = friendshipRepository.findById(requestId)
+                .orElseThrow(() -> new FriendRequestNotFoundException("Freundschaftsanfrage mit ID " + requestId + " nicht gefunden."));
+
+        if (!friendship.getUserTwo().getId().equals(currentUser.getId()) || friendship.getStatus() != FriendshipStatus.PENDING) {
+            logger.warn("Versuch, eine ungültige oder nicht zu Benutzer {} gehörende Anfrage ID {} anzunehmen", currentUsername, requestId);
+            throw new InvalidFriendRequestOperationException("Die Anfrage kann nicht angenommen werden.");
+        }
+
+        friendship.setStatus(FriendshipStatus.ACCEPTED);
+        friendshipRepository.save(friendship);
+        logger.info("Benutzer {} hat die Freundschaftsanfrage ID {} von Benutzer {} angenommen", currentUsername, requestId, friendship.getUserOne().getUsername());
+    }
+
+    @Transactional
+    public void rejectFriendRequest(String currentUsername, Long requestId) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + currentUsername));
+
+        Friendship friendship = friendshipRepository.findById(requestId)
+                .orElseThrow(() -> new FriendRequestNotFoundException("Freundschaftsanfrage mit ID " + requestId + " nicht gefunden."));
+
+        boolean isReceiver = friendship.getUserTwo().getId().equals(currentUser.getId());
+        boolean isSender = friendship.getUserOne().getId().equals(currentUser.getId());
+
+        if ((!isReceiver && !isSender) || friendship.getStatus() != FriendshipStatus.PENDING) {
+            logger.warn("Versuch, eine ungültige oder nicht zu Benutzer {} gehörende Anfrage ID {} abzulehnen/zurückzuziehen", currentUsername, requestId);
+            throw new InvalidFriendRequestOperationException("Die Anfrage kann nicht abgelehnt/zurückgezogen werden.");
+        }
+        
+        friendshipRepository.delete(friendship);
+        if (isReceiver) {
+             logger.info("Benutzer {} hat die Freundschaftsanfrage ID {} von Benutzer {} abgelehnt", currentUsername, requestId, friendship.getUserOne().getUsername());
+        } else {
+             logger.info("Benutzer {} hat seine Freundschaftsanfrage ID {} an Benutzer {} zurückgezogen", currentUsername, requestId, friendship.getUserTwo().getUsername());
+        }
+    }
+
+
     public static class FriendNotFoundException extends RuntimeException {
         public FriendNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    public static class FriendRequestNotFoundException extends RuntimeException {
+        public FriendRequestNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidFriendRequestOperationException extends RuntimeException {
+        public InvalidFriendRequestOperationException(String message) {
             super(message);
         }
     }

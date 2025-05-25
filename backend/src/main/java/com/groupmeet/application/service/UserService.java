@@ -8,12 +8,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import com.google.common.cache.Cache;
+import com.groupmeet.application.dto.AchievementDto;
+import com.groupmeet.application.dto.FriendSummaryDto;
+import com.groupmeet.application.dto.ProfileFriendshipStatus;
+import com.groupmeet.application.dto.UserProfileDto;
 import com.groupmeet.application.dto.UserRegistrationDto;
 import com.groupmeet.application.dto.UserSearchQueryCriteria;
 import com.groupmeet.application.dto.UserSearchResultDto;
@@ -26,11 +32,12 @@ import com.groupmeet.application.repository.FriendshipRepository;
 import com.groupmeet.application.repository.InterestRepository;
 import com.groupmeet.application.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
-import com.groupmeet.application.repository.InterestRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import com.groupmeet.application.model.Interest;
 
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -41,8 +48,11 @@ import jakarta.validation.Valid;
 @Validated
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailService emailService;
@@ -60,11 +70,6 @@ public class UserService {
     @Autowired
     private InterestRepository interestRepository;
 
-    @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     public User registerNewUser(@Valid UserRegistrationDto registrationDto) {
 
@@ -211,5 +216,90 @@ public class UserService {
         }
         user.setInterests(interests);
         return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileDto getUserProfile(Long profileUserId, String viewerUsername) {
+        User profileUser = userRepository.findById(profileUserId)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzerprofil mit ID " + profileUserId + " nicht gefunden."));
+
+        User viewerUser = null;
+        if (viewerUsername != null && !viewerUsername.isBlank()) {
+            viewerUser = userRepository.findByUsername(viewerUsername)
+                    .orElse(null);
+        }
+
+        UserProfileDto dto = new UserProfileDto();
+        dto.setId(profileUser.getId());
+        dto.setUsername(profileUser.getUsername());
+        dto.setFirstName(profileUser.getFirstName());
+        dto.setLastName(profileUser.getLastName());
+        dto.setGender(profileUser.getGender());
+        dto.setAvatarUrl(profileUser.getAvatarUrl());
+        dto.setLocation(profileUser.getLocation());
+        dto.setAboutMe(profileUser.getAboutMe());
+
+        if (profileUser.getBirthDate() != null) {
+            dto.setAge(Period.between(profileUser.getBirthDate(), LocalDate.now()).getYears());
+        }
+
+        dto.setInterests(profileUser.getInterests().stream().map(Interest::getName).collect(Collectors.toList()));
+
+        List<AchievementDto> achievements = new ArrayList<>();
+        long friendsCount = friendshipRepository.countAcceptedFriendsForUser(profileUser);
+        dto.setFriendsCount((int) friendsCount);
+
+        if (friendsCount >= 5) {
+            achievements.add(new AchievementDto("Freundeskreis", "Hat 5 oder mehr Freunde", "Users"));
+        }
+        // TODO: Mehr Achievements hinzufügen
+        dto.setAchievements(achievements);
+
+        Page<Friendship> friendConnectionsPage = friendshipRepository.findFriendshipsByUserAndStatus(
+            profileUser, FriendshipStatus.ACCEPTED, PageRequest.of(0, 5, Sort.by("createdAt").descending()));
+        
+        List<FriendSummaryDto> friendPreviews = friendConnectionsPage.getContent().stream()
+            .map(friendship -> {
+                User friend = friendship.getUserOne().getId().equals(profileUser.getId()) ? friendship.getUserTwo() : friendship.getUserOne();
+                return FriendSummaryDto.fromUser(friend);
+            })
+            .collect(Collectors.toList());
+        dto.setFriendPreviews(friendPreviews);
+
+
+        if (viewerUser == null) {
+            dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.NONE);
+        } else if (profileUser.getId().equals(viewerUser.getId())) { // Falls der Nutzer sein eigenes Profil ansieht
+            dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.SELF);
+            dto.setPendingFriendRequestsCount((int) friendshipRepository.countPendingIncomingRequestsForUser(profileUser));
+        } else {
+            // Falls der Nutzer ein anderes Profil ansieht
+            Optional<Friendship> friendshipOpt = friendshipRepository.findFriendshipBetweenUsers(profileUser, viewerUser);
+
+            if (friendshipOpt.isPresent()) {
+            Friendship friendship = friendshipOpt.get();
+            dto.setRelatedFriendshipId(friendship.getId());
+
+            switch (friendship.getStatus()) {
+                case ACCEPTED:
+                dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.FRIENDS);
+                break;
+                case PENDING:
+                if (friendship.getUserOne().getId().equals(viewerUser.getId())) {
+                    dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.REQUEST_SENT);
+                } else {
+                    dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.REQUEST_RECEIVED);
+                }
+                break;
+                default:
+                dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.NONE);
+                break;
+            }
+            } else {
+            dto.setFriendshipStatusWithViewer(ProfileFriendshipStatus.NONE);
+            }
+        }
+        
+        return dto;
     }
 }

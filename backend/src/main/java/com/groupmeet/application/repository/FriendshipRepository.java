@@ -31,12 +31,16 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
             "      (LOWER(f.userOne.username) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "       LOWER(f.userOne.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "       LOWER(f.userOne.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))))")
-
     Page<Friendship> findFriendshipsByUserAndStatusAndSearchTerm(
             @Param("currentUser") User currentUser,
             @Param("status") FriendshipStatus status,
             @Param("searchTerm") String searchTerm,
             Pageable pageable);
+
+    @Query("SELECT f FROM Friendship f WHERE " +
+        "((f.userOne = :user1 AND f.userTwo = :user2) OR (f.userOne = :user2 AND f.userTwo = :user1))")
+    Optional<Friendship> findFriendshipBetweenUsers(@Param("user1") User user1, @Param("user2") User user2);
+
 
     @Query("SELECT f FROM Friendship f WHERE " +
             "((f.userOne = :user1 AND f.userTwo = :user2) OR (f.userOne = :user2 AND f.userTwo = :user1)) " +
@@ -45,4 +49,12 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
             @Param("user1") User user1,
             @Param("user2") User user2,
             @Param("status") FriendshipStatus status);
+
+    @Query("SELECT COUNT(f) FROM Friendship f WHERE f.userTwo = :user AND f.status = com.groupmeet.application.model.FriendshipStatus.PENDING")
+    long countPendingIncomingRequestsForUser(@Param("user") User user);
+    
+    @Query("SELECT COUNT(f) FROM Friendship f WHERE (f.userOne = :user OR f.userTwo = :user) AND f.status = com.groupmeet.application.model.FriendshipStatus.ACCEPTED")
+    long countAcceptedFriendsForUser(@Param("user") User user);
+
+    Page<Friendship> findByUserTwoAndStatusOrderByCreatedAtDesc(User userTwo, FriendshipStatus status, Pageable pageable);
 }
