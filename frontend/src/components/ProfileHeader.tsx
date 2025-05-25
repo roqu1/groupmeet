@@ -14,12 +14,12 @@ import {
   MinusCircle,
   X,
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { useSendFriendRequest } from '@/hooks/friend-requests/useSendFriendRequest';
 import { useAcceptFriendRequest } from '@/hooks/friend-requests/useAcceptFriendRequest';
 import { useRejectFriendRequest } from '@/hooks/friend-requests/useRejectFriendRequest';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRemoveFriend } from '@/hooks/friend-requests/useRemoveFriend';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface ProfileHeaderProps {
   profile: UserProfile;

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useHttp, ApiError } from '../useHttp';
-import { useAuth, AuthUser } from '../../context/AuthContext';
 import { API_CONFIG } from '../../config/api';
+import { AuthUser, useAuth } from '@/lib/auth/AuthContext';
 
 // Matches backend LoginRequestDto
 interface LoginRequest {

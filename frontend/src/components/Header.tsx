@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { useLogout } from '../hooks/auth/useLogout';
 import { Button } from './ui/button';
 import { LogOut, UserCircle, Loader2, Users, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 export default function Header() {
   const { isAuthenticated, currentUser, isLoading: isAuthLoading } = useAuth();

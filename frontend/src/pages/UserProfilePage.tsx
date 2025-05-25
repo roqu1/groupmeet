@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import AboutMeSection from '@/components/profile/AboutMeSection';
 import InterestsSection from '@/components/profile/InterestsSection';
 import AchievementsSection from '@/components/profile/AchievementsSection';
@@ -9,6 +8,7 @@ import FriendsSection from '@/components/profile/FriendsSection';
 import { Loader2, AlertCircle } from 'lucide-react';
 import ProfileHeader from '@/components/ProfileHeader';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();

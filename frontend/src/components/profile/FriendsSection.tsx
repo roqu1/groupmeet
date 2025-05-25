@@ -18,7 +18,6 @@ const FriendsSection: React.FC<FriendsSectionProps> = ({
   friendPreviews,
   pendingFriendRequestsCount,
   isOwnProfile,
-  profileUserId,
 }) => {
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'N/A';
@@ -30,7 +29,7 @@ const FriendsSection: React.FC<FriendsSectionProps> = ({
         <h2 className="text-xl font-semibold text-foreground">Freunde ({friendsCount})</h2>
         {isOwnProfile && (
           <Button asChild variant="link" size="sm">
-            <Link to={`/profile/${profileUserId}/friends`}>Alle anzeigen</Link>
+            <Link to={`/friends`}>Alle anzeigen</Link>
           </Button>
         )}
       </div>
