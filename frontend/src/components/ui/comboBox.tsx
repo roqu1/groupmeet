@@ -19,7 +19,7 @@ export type ComboboxOption = {
 };
 
 interface ComboboxProps {
-  options: ComboboxOption[];
+  options: readonly ComboboxOption[];
   value: string;
   onSelect: (value: string) => void;
   placeholder?: string;
