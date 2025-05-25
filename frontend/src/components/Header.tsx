@@ -49,10 +49,11 @@ export default function Header() {
               </Link>
 
               <Link
-                to="/profile"
+                to={`/profile/${currentUser.id}`}
                 className="text-sm font-medium hover:text-primary flex items-center gap-1"
+                title="Mein Profil"
               >
-                <UserCircle className="h-4 w-4" /> Profil
+                <UserCircle className="h-4 w-4" /> <span className="hidden sm:inline">Profil</span>
               </Link>
               <Button
                 variant="ghost"

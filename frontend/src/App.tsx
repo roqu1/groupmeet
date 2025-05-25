@@ -11,6 +11,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import FriendsListPage from './pages/FriendsListPage';
 import FindFriendsPage from './pages/FindFriendsPage';
 import { ToastContainer } from 'react-toastify';
+import UserProfilePage from './pages/UserProfilePage';
+import FriendRequestsPage from './pages/FriendRequestsPage';
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/friends" element={<FriendsListPage />} />
             <Route path="/find-friends" element={<FindFriendsPage />} />
+            <Route path="/profile/:userId" element={<UserProfilePage />} />
+            <Route path="/friend-requests" element={<FriendRequestsPage />} />
           </Route>
 
           {/* ToDo: Not found page */}

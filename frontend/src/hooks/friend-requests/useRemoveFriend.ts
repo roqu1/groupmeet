@@ -1,25 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
+import { useMutation, UseMutationResult } from '@tanstack/react-query';
 import { removeFriend } from '../../api/friends';
 import { toast } from 'react-toastify';
 
-type RemoveFriendError = Error;
+type RemoveFriendError = Error & { statusCode?: number };
 
 export const useRemoveFriend = (
-  _p0: () => void
+  onSettledCallback?: () => void
 ): UseMutationResult<void, RemoveFriendError, number> => {
-  const queryClient = useQueryClient();
-
   const mutationResult = useMutation<void, RemoveFriendError, number>({
     mutationFn: removeFriend,
 
     onSuccess: () => {
       toast.success('Freund erfolgreich entfernt!');
-      queryClient.invalidateQueries({ queryKey: ['friends'] });
     },
-
     onError: (error: RemoveFriendError) => {
       toast.error(`Fehler beim Entfernen des Freundes: ${error.message || 'Unbekannter Fehler'}`);
+    },
+    onSettled: () => {
+      if (onSettledCallback) {
+        onSettledCallback();
+      }
     },
   });
 

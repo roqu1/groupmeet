@@ -14,5 +14,9 @@ export const API_CONFIG = {
     friendById: (friendId: number | string): string => `/api/friends/${friendId}`,
     userSearch: '/api/users/search',
     sendFriendRequest: (targetUserId: number): string => `/api/friends/requests/${targetUserId}`,
+    userProfile: (userId: string | number): string => `/api/users/${userId}/profile`,
+    incomingFriendRequests: '/api/friends/requests/incoming',
+    acceptFriendRequest: (requestId: number): string => `/api/friends/requests/${requestId}/accept`,
+    rejectFriendRequest: (requestId: number): string => `/api/friends/requests/${requestId}/reject`,
   },
 } as const;
