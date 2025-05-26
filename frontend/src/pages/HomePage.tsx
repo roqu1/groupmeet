@@ -1,17 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Combobox, ComboboxOption } from '@/components/ui/comboBox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
-import SimpleDatePicker from '@/components/ui/SimpleDatePicker';
-import { Label } from '@/components/ui/label';
 import {
   Search,
   Filter as FilterIcon,
@@ -22,7 +10,6 @@ import {
 } from 'lucide-react';
 import CreateMeetingDialog from '@/components/meetings/CreateMeetingDialog';
 import MeetingCard from '@/components/meetings/MeetingCard';
-import { LOCATION_OPTIONS } from '@/config/options';
 import { cn } from '@/lib/utils';
 import {
   Pagination,
@@ -31,39 +18,59 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { MeetingsSearchParams, MeetingCardData } from '@/types/meeting';
+import { MeetingsSearchParams, MeetingCardData, MeetingFormat } from '@/types/meeting';
 import { useMeetingsSearch } from '@/hooks/meetings/useMeetingsSearch';
+import MeetingsFilterPanel from '@/components/meetings/MeetingsFilterPanel';
+import { useInterestOptions } from '@/hooks/options/useInterestOptions';
+import { useDebounce } from '@/hooks/useDebounce';
+import { Button } from '@/components/ui/button';
 
-const artOptions: MultiSelectOption[] = [
-  { value: 'sport', label: 'Sport' },
-  { value: 'kunst', label: 'Kunst' },
-  { value: 'musik', label: 'Musik' },
-  { value: 'lernen', label: 'Lernen' },
-  { value: 'technologie', label: 'Technologie' },
-];
-const formatOptions: ComboboxOption[] = [
-  { value: 'OFFLINE', label: 'Vor Ort' },
-  { value: 'ONLINE', label: 'Online' },
-];
-
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 6;
 const MIN_CARD_LIST_HEIGHT_PX = 400;
 
-const HomePage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedArt, setSelectedArt] = useState<string[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string>('');
-  const [selectedFormat, setSelectedFormat] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
+const initialUiFiltersState: {
+  art: string[];
+  location: string;
+  format: MeetingFormat | '';
+  startDate?: Date;
+  endDate?: Date;
+} = {
+  art: [],
+  location: '',
+  format: '',
+  startDate: undefined,
+  endDate: undefined,
+};
 
-  const [activeSearchParams, setActiveSearchParams] = useState<MeetingsSearchParams>({
+const formatDateToYYYYMMDD = (date: Date | undefined): string | undefined => {
+  if (!date) return undefined;
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const HomePage = () => {
+  const [uiSearchTerm, setUiSearchTerm] = useState('');
+  const debouncedUiSearchTerm = useDebounce(uiSearchTerm, 500);
+
+  const [uiSelectedArt, setUiSelectedArt] = useState<string[]>(initialUiFiltersState.art);
+  const [uiSelectedLocation, setUiSelectedLocation] = useState<string>(
+    initialUiFiltersState.location
+  );
+  const [uiSelectedFormat, setUiSelectedFormat] = useState<MeetingFormat | ''>(
+    initialUiFiltersState.format
+  );
+  const [uiStartDate, setUiStartDate] = useState<Date | undefined>(initialUiFiltersState.startDate);
+  const [uiEndDate, setUiEndDate] = useState<Date | undefined>(initialUiFiltersState.endDate);
+
+  const [appliedSearchParams, setAppliedSearchParams] = useState<MeetingsSearchParams>({
     page: 0,
     size: DEFAULT_PAGE_SIZE,
   });
 
   const [isFiltersPanelOpen, setIsFiltersPanelOpen] = useState(false);
-  const initialSearchDone = useRef(false);
+  const initialLoadRef = useRef(true);
 
   const {
     data: meetingsPageData,
@@ -71,7 +78,14 @@ const HomePage = () => {
     isFetching,
     isError,
     error,
-  } = useMeetingsSearch(activeSearchParams);
+  } = useMeetingsSearch(appliedSearchParams, true);
+
+  const {
+    data: interestOptionsData,
+    isLoading: isLoadingInterests,
+    isError: isErrorInterests,
+  } = useInterestOptions();
+  const interestOptions = useMemo(() => interestOptionsData || [], [interestOptionsData]);
 
   const searchResults = useMemo(() => meetingsPageData?.content ?? [], [meetingsPageData]);
   const paginationInfo = useMemo(
@@ -84,247 +98,167 @@ const HomePage = () => {
     [meetingsPageData]
   );
 
-  const initialUiFiltersState = useMemo(
-    () => ({
-      searchTerm: '',
-      art: [],
-      location: '',
-      format: '',
-      startDate: undefined,
-      endDate: undefined,
-    }),
+  const buildAndSetAppliedSearchParams = useCallback(
+    (
+      page: number,
+      searchTerm: string,
+      art: string[],
+      location: string,
+      format: MeetingFormat | '',
+      startDate?: Date,
+      endDate?: Date
+    ) => {
+      const params: MeetingsSearchParams = {
+        page,
+        size: DEFAULT_PAGE_SIZE,
+        searchTerm: searchTerm.trim() || undefined,
+        types: art.length > 0 ? art : undefined,
+        location: location || undefined,
+        format: format || undefined,
+        startDate: formatDateToYYYYMMDD(startDate),
+        endDate: formatDateToYYYYMMDD(endDate),
+      };
+      const cleanedParams = Object.fromEntries(
+        Object.entries(params).filter(
+          ([, v]) => v !== undefined && !(Array.isArray(v) && v.length === 0)
+        )
+      ) as MeetingsSearchParams;
+      setAppliedSearchParams(cleanedParams);
+    },
     []
   );
 
-  const triggerMeetingSearch = useCallback(
-    (
-      currentPage: number,
-      currentSearchTerm: string,
-      currentSelectedArt: string[],
-      currentSelectedLocation: string,
-      currentSelectedFormat: string,
-      currentStartDate?: Date,
-      currentEndDate?: Date
-    ) => {
-      const params: MeetingsSearchParams = {
-        page: currentPage,
-        size: DEFAULT_PAGE_SIZE,
-        searchTerm: currentSearchTerm.trim() || undefined,
-        types: currentSelectedArt.length > 0 ? currentSelectedArt : undefined,
-        location: currentSelectedLocation || undefined,
-        format: currentSelectedFormat
-          ? (currentSelectedFormat.toUpperCase() as 'ONLINE' | 'OFFLINE')
-          : undefined,
-        startDate: currentStartDate ? currentStartDate.toISOString().split('T')[0] : undefined,
-        endDate: currentEndDate ? currentEndDate.toISOString().split('T')[0] : undefined,
-      };
-      const cleanedParams = Object.entries(params).reduce((acc, [key, value]) => {
-        if (value !== undefined && !(Array.isArray(value) && value.length === 0)) {
-          if (key === 'format' && value === '') {
-            /*This condition is intentionally left blank because we do not want to add an empty format*/
-          } else {
-            acc[key as keyof MeetingsSearchParams] = value;
-          }
-        }
-        return acc;
-      }, {} as MeetingsSearchParams);
-      setActiveSearchParams(cleanedParams);
-    },
-    [setActiveSearchParams]
-  );
+  useEffect(() => {
+    if (!initialLoadRef.current) {
+      buildAndSetAppliedSearchParams(
+        0,
+        debouncedUiSearchTerm,
+        uiSelectedArt,
+        uiSelectedLocation,
+        uiSelectedFormat,
+        uiStartDate,
+        uiEndDate
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedUiSearchTerm]);
 
-  const handleApplyFilters = () => {
-    triggerMeetingSearch(
+  useEffect(() => {
+    if (initialLoadRef.current) {
+      buildAndSetAppliedSearchParams(
+        0,
+        uiSearchTerm,
+        uiSelectedArt,
+        uiSelectedLocation,
+        uiSelectedFormat,
+        uiStartDate,
+        uiEndDate
+      );
+      initialLoadRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    buildAndSetAppliedSearchParams(
       0,
-      searchTerm,
-      selectedArt,
-      selectedLocation,
-      selectedFormat,
-      startDate,
-      endDate
+      uiSearchTerm,
+      uiSelectedArt,
+      uiSelectedLocation,
+      uiSelectedFormat,
+      uiStartDate,
+      uiEndDate
     );
     if (window.innerWidth < 1024) setIsFiltersPanelOpen(false);
-  };
+  }, [
+    buildAndSetAppliedSearchParams,
+    uiSearchTerm,
+    uiSelectedArt,
+    uiSelectedLocation,
+    uiSelectedFormat,
+    uiStartDate,
+    uiEndDate,
+  ]);
 
-  const handleResetFilters = () => {
-    setSearchTerm(initialUiFiltersState.searchTerm);
-    setSelectedArt(initialUiFiltersState.art);
-    setSelectedLocation(initialUiFiltersState.location);
-    setSelectedFormat(initialUiFiltersState.format);
-    setStartDate(initialUiFiltersState.startDate);
-    setEndDate(initialUiFiltersState.endDate);
-    triggerMeetingSearch(
+  const handleResetFilters = useCallback(() => {
+    setUiSearchTerm('');
+    setUiSelectedArt(initialUiFiltersState.art);
+    setUiSelectedLocation(initialUiFiltersState.location);
+    setUiSelectedFormat(initialUiFiltersState.format);
+    setUiStartDate(initialUiFiltersState.startDate);
+    setUiEndDate(initialUiFiltersState.endDate);
+    buildAndSetAppliedSearchParams(
       0,
-      initialUiFiltersState.searchTerm,
+      '',
       initialUiFiltersState.art,
       initialUiFiltersState.location,
       initialUiFiltersState.format,
       initialUiFiltersState.startDate,
       initialUiFiltersState.endDate
     );
-  };
+    if (window.innerWidth < 1024) setIsFiltersPanelOpen(false);
+  }, [buildAndSetAppliedSearchParams]);
 
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 0 && newPage < paginationInfo.totalPages) {
-      setActiveSearchParams((prevParams) => ({ ...prevParams, page: newPage }));
+    if (
+      newPage >= 0 &&
+      newPage < (paginationInfo.totalPages || 1) &&
+      newPage !== paginationInfo.currentPage
+    ) {
+      buildAndSetAppliedSearchParams(
+        newPage,
+        uiSearchTerm,
+        uiSelectedArt,
+        uiSelectedLocation,
+        uiSelectedFormat,
+        uiStartDate,
+        uiEndDate
+      );
     }
   };
 
-  useEffect(() => {
-    if (!initialSearchDone.current) {
-      triggerMeetingSearch(
-        0,
-        initialUiFiltersState.searchTerm,
-        initialUiFiltersState.art,
-        initialUiFiltersState.location,
-        initialUiFiltersState.format,
-        initialUiFiltersState.startDate,
-        initialUiFiltersState.endDate
-      );
-      initialSearchDone.current = true;
-    }
-  }, []);
+  const isAnyFilterActive = useMemo(() => {
+    return (
+      uiSearchTerm.trim() !== '' ||
+      uiSelectedArt.length > 0 ||
+      uiSelectedLocation !== '' ||
+      uiSelectedFormat !== '' ||
+      uiStartDate !== undefined ||
+      uiEndDate !== undefined
+    );
+  }, [uiSearchTerm, uiSelectedArt, uiSelectedLocation, uiSelectedFormat, uiStartDate, uiEndDate]);
 
-  useEffect(() => {
-    if (
-      initialSearchDone.current &&
-      searchTerm === '' &&
-      activeSearchParams.searchTerm &&
-      activeSearchParams.searchTerm !== ''
-    ) {
-      triggerMeetingSearch(
-        0,
-        '',
-        selectedArt,
-        selectedLocation,
-        selectedFormat,
-        startDate,
-        endDate
-      );
-    }
-  }, [
-    searchTerm,
-    selectedArt,
-    selectedLocation,
-    selectedFormat,
-    startDate,
-    endDate,
-    triggerMeetingSearch,
-    activeSearchParams.searchTerm,
-  ]);
-
-  const FiltersPanelContent = () => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="filter-art">Art</Label>
-        <MultiSelect
-          id="filter-art"
-          options={artOptions}
-          selected={selectedArt}
-          onValueChange={setSelectedArt}
-          placeholder="Art wählen..."
-          disabled={isFetching}
-          className="mt-1"
-        />
-      </div>
-      <div>
-        <Label htmlFor="filter-location">Ort</Label>
-        <Combobox
-          id="filter-location"
-          options={LOCATION_OPTIONS}
-          value={selectedLocation}
-          onSelect={setSelectedLocation}
-          placeholder="Ort wählen..."
-          disabled={isFetching}
-          className="mt-1"
-        />
-      </div>
-      <div>
-        <Label htmlFor="filter-format">Format</Label>
-        <Select
-          value={selectedFormat || 'ALL_FORMATS_PLACEHOLDER'}
-          onValueChange={(value) => {
-            if (value === 'ALL_FORMATS_PLACEHOLDER') {
-              setSelectedFormat('');
-            } else {
-              setSelectedFormat(value);
-            }
-          }}
-          disabled={isFetching}
-        >
-          <SelectTrigger id="filter-format" className="mt-1">
-            <SelectValue placeholder="Format wählen..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL_FORMATS_PLACEHOLDER">Alle Formate</SelectItem>
-            {formatOptions.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-3 items-end">
-        <div>
-          <Label htmlFor="filter-start-date" className="block text-sm font-medium mb-1">
-            Start Datum
-          </Label>
-          <SimpleDatePicker
-            id="filter-start-date"
-            selectedDate={startDate}
-            onDateChange={setStartDate}
-            disabled={isFetching || (endDate ? !!(startDate && startDate > endDate) : false)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="filter-end-date" className="block text-sm font-medium mb-1">
-            End Datum
-          </Label>
-          <SimpleDatePicker
-            id="filter-end-date"
-            selectedDate={endDate}
-            onDateChange={setEndDate}
-            disabled={isFetching || (startDate ? !!(endDate && endDate < startDate) : false)}
-          />
-        </div>
-      </div>
-      <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t mt-4">
-        <Button onClick={handleApplyFilters} className="flex-1" disabled={isFetching}>
-          Speichern
-        </Button>
-        <Button
-          onClick={handleResetFilters}
-          variant="outline"
-          className="flex-1"
-          disabled={isFetching}
-        >
-          Filter zurücksetzen
-        </Button>
-      </div>
-    </div>
+  const stableSetUiSelectedLocation = useCallback(
+    (value: string) => setUiSelectedLocation(value),
+    []
   );
+  const stableSetUiSelectedFormat = useCallback(
+    (value: MeetingFormat | '') => setUiSelectedFormat(value),
+    []
+  );
+  const stableSetUiStartDate = useCallback((date?: Date) => setUiStartDate(date), []);
+  const stableSetUiEndDate = useCallback((date?: Date) => setUiEndDate(date), []);
 
   return (
     <div className="container-wrapper py-8">
-      <div className="flex justify-between items-center mb-6 lg:mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Finde passende Meetings</h1>
-        <CreateMeetingDialog formatOptions={formatOptions} artOptions={artOptions} />
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 lg:mb-8 gap-4">
+        <h1 className="text-3xl font-bold text-foreground text-center sm:text-left">
+          Finde passende Meetings
+        </h1>
+        <CreateMeetingDialog />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-muted-foreground" />
-            </div>
+            </div>{' '}
             <Input
               type="search"
               placeholder="Meetings nach Titel oder Beschreibung suchen..."
               className="pl-9 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
-              disabled={isFetching}
+              value={uiSearchTerm}
+              onChange={(e) => setUiSearchTerm(e.target.value)}
             />
           </div>
           <div className="lg:hidden">
@@ -334,6 +268,7 @@ const HomePage = () => {
               onClick={() => setIsFiltersPanelOpen(!isFiltersPanelOpen)}
               aria-expanded={isFiltersPanelOpen}
               aria-controls="filters-panel-mobile"
+              disabled={isFetching || isLoadingInterests}
             >
               <div className="flex items-center">
                 <FilterIcon className="mr-2 h-4 w-4" />
@@ -347,11 +282,28 @@ const HomePage = () => {
             </Button>
             {isFiltersPanelOpen && (
               <div id="filters-panel-mobile" className="p-4 border rounded-lg bg-card shadow-sm">
-                <FiltersPanelContent />
+                <MeetingsFilterPanel
+                  uiSelectedArt={uiSelectedArt}
+                  setUiSelectedArt={setUiSelectedArt}
+                  uiSelectedLocation={uiSelectedLocation}
+                  setUiSelectedLocation={stableSetUiSelectedLocation}
+                  uiSelectedFormat={uiSelectedFormat}
+                  setUiSelectedFormat={stableSetUiSelectedFormat}
+                  uiStartDate={uiStartDate}
+                  setUiStartDate={stableSetUiStartDate}
+                  uiEndDate={uiEndDate}
+                  setUiEndDate={stableSetUiEndDate}
+                  interestOptions={interestOptions}
+                  isLoadingInterests={isLoadingInterests}
+                  isErrorInterests={isErrorInterests}
+                  isUIDisabled={isFetching || isLoadingInterests}
+                  onApplyFilters={handleApplyFilters}
+                  onResetFilters={handleResetFilters}
+                />
               </div>
             )}
           </div>
-          {isError && (
+          {isError && !isLoading && (
             <div className="p-4 border border-destructive/50 bg-destructive/10 text-destructive rounded flex items-center gap-2 text-sm">
               <AlertCircle className="h-4 w-4" />
               {error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten.'}
@@ -364,7 +316,7 @@ const HomePage = () => {
             )}
             style={{ minHeight: `${MIN_CARD_LIST_HEIGHT_PX}px` }}
           >
-            {isLoading ? (
+            {isLoading && !meetingsPageData ? (
               <div className="md:col-span-2 flex justify-center items-center pt-10 min-h-[300px]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
@@ -372,9 +324,11 @@ const HomePage = () => {
               searchResults.map((meeting: MeetingCardData) => (
                 <MeetingCard key={meeting.id} meeting={meeting} />
               ))
-            ) : !isError && !isLoading ? (
-              <div className="md:col-span-2 flex justify-center items-center pt-10 text-muted-foreground min-h-[300px]">
-                Keine Meetings gefunden. Ändern Sie die Filterkriterien.
+            ) : !isError && !isFetching ? (
+              <div className="md:col-span-2 flex justify-center items-center pt-10 text-muted-foreground min-h-[300px] text-center">
+                {isAnyFilterActive
+                  ? 'Keine Meetings für die aktuellen Filter gefunden. Versuchen Sie, Ihre Suche anzupassen.'
+                  : 'Derzeit sind keine Meetings verfügbar. Erstellen Sie das erste!'}
               </div>
             ) : null}
           </div>
@@ -403,9 +357,26 @@ const HomePage = () => {
           )}
         </div>
         <div className="hidden lg:block lg:col-span-1">
-          <div className="sticky top-[6.5rem] p-4 border rounded-lg bg-card shadow-sm">
+          <div className="sticky top-[calc(theme(space.14)_+_2rem)] p-4 border rounded-lg bg-card shadow-sm">
             <h2 className="text-xl font-semibold border-b pb-3 mb-4">Filterung</h2>
-            <FiltersPanelContent />
+            <MeetingsFilterPanel
+              uiSelectedArt={uiSelectedArt}
+              setUiSelectedArt={setUiSelectedArt}
+              uiSelectedLocation={uiSelectedLocation}
+              setUiSelectedLocation={stableSetUiSelectedLocation}
+              uiSelectedFormat={uiSelectedFormat}
+              setUiSelectedFormat={stableSetUiSelectedFormat}
+              uiStartDate={uiStartDate}
+              setUiStartDate={stableSetUiStartDate}
+              uiEndDate={uiEndDate}
+              setUiEndDate={stableSetUiEndDate}
+              interestOptions={interestOptions}
+              isLoadingInterests={isLoadingInterests}
+              isErrorInterests={isErrorInterests}
+              isUIDisabled={isFetching || isLoadingInterests}
+              onApplyFilters={handleApplyFilters}
+              onResetFilters={handleResetFilters}
+            />
           </div>
         </div>
       </div>

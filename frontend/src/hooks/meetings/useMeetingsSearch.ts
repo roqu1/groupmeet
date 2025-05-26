@@ -2,7 +2,7 @@ import { useQuery, UseQueryResult, keepPreviousData } from '@tanstack/react-quer
 import { fetchMeetings } from '../../api/meetings';
 import { MeetingsSearchPage, MeetingsSearchParams } from '../../types/meeting';
 
-type MeetingsSearchError = Error;
+type MeetingsSearchError = Error & { statusCode?: number };
 
 export const useMeetingsSearch = (
   params: MeetingsSearchParams,

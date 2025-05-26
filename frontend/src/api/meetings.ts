@@ -1,219 +1,82 @@
-import { MeetingsSearchPage, MeetingsSearchParams, MeetingCardData } from '../types/meeting';
-
-const DEFAULT_API_PAGE_SIZE = 10;
-
-const ALL_MOCK_MEETINGS_DATA: MeetingCardData[] = [
-  {
-    id: 'm1',
-    title: 'React Advanced Workshop',
-    shortDescription:
-      'Tiefere Einblicke in React Hooks und State Management. Längerer Text um Abschnitt zu testen.',
-    format: 'ONLINE',
-    type: 'Technologie',
-    participantCount: 18,
-    maxParticipants: 25,
-  },
-  {
-    id: 'm2',
-    title: 'Yoga am Morgen im Park',
-    shortDescription: 'Starte den Tag entspannt mit einer Yoga-Session im Freien.',
-    format: 'OFFLINE',
-    type: 'Sport',
-    participantCount: 12,
-    maxParticipants: 20,
-  },
-  {
-    id: 'm3',
-    title: 'Aquarellmalerei für Anfänger',
-    shortDescription: 'Entdecke deine kreative Seite und lerne die Grundlagen der Aquarelltechnik.',
-    format: 'OFFLINE',
-    type: 'Kunst',
-    participantCount: 7,
-    maxParticipants: 15,
-  },
-  {
-    id: 'm4',
-    title: 'Node.js Backend Konferenz Online',
-    shortDescription:
-      'Spannende Vorträge von internationalen Experten über serverseitiges JavaScript und neue Frameworks.',
-    format: 'ONLINE',
-    type: 'Technologie',
-    participantCount: 150,
-    maxParticipants: 300,
-  },
-  {
-    id: 'm5',
-    title: 'Fußballspiel im Bürgerpark',
-    shortDescription:
-      'Lockeres Kickchen für alle Fußballbegeisterten am Wochenende. Treffpunkt am Haupteingang.',
-    format: 'OFFLINE',
-    type: 'Sport',
-    participantCount: 22,
-    maxParticipants: 30,
-  },
-  {
-    id: 'm6',
-    title: 'Konzert: Indie-Band "The Devs"',
-    shortDescription:
-      'Live-Musik und gute Stimmung garantiert. Ein Muss für alle Fans guter Gitarrenriffs.',
-    format: 'OFFLINE',
-    type: 'Musik',
-    participantCount: 88,
-    maxParticipants: 150,
-  },
-  {
-    id: 'm7',
-    title: 'Online Spanisch lernen A1',
-    shortDescription: 'Grundkurs Spanisch für Anfänger ohne Vorkenntnisse.',
-    format: 'ONLINE',
-    type: 'Lernen',
-    participantCount: 15,
-    maxParticipants: 20,
-  },
-  {
-    id: 'm8',
-    title: 'Fotografie-Workshop: Porträts',
-    shortDescription: 'Lerne, ausdrucksstarke Porträts zu erstellen.',
-    format: 'OFFLINE',
-    type: 'Kunst',
-    participantCount: 8,
-    maxParticipants: 10,
-  },
-  {
-    id: 'm9',
-    title: 'Meditationsabend',
-    shortDescription: 'Finde innere Ruhe und Ausgeglichenheit.',
-    format: 'ONLINE',
-    type: 'Gesundheit',
-    participantCount: 30,
-  },
-  {
-    id: 'm10',
-    title: 'Brettspiel-Treff',
-    shortDescription: 'Gemütlicher Abend mit spannenden Brettspielen.',
-    format: 'OFFLINE',
-    type: 'Spiele',
-    participantCount: 10,
-    maxParticipants: 16,
-  },
-  {
-    id: 'm11',
-    title: 'Webinar: Agile Methoden',
-    shortDescription: 'Einführung in Scrum und Kanban für Projektmanagement.',
-    format: 'ONLINE',
-    type: 'Lernen',
-    participantCount: 50,
-  },
-  {
-    id: 'm12',
-    title: 'Kunstausstellung: Moderne Skulpturen',
-    shortDescription: 'Besuch der aktuellen Ausstellung lokaler Künstler.',
-    format: 'OFFLINE',
-    type: 'Kunst',
-    participantCount: 13,
-    maxParticipants: 25,
-  },
-];
-
-const ALL_MOCK_MEETINGS_WITH_FILTER_DATA = ALL_MOCK_MEETINGS_DATA.map((meeting, index) => ({
-  ...meeting,
-  location:
-    meeting.id === 'm2' || meeting.id === 'm5'
-      ? 'Bremen'
-      : meeting.id === 'm3' || meeting.id === 'm9'
-        ? 'Hamburg'
-        : meeting.id === 'm6'
-          ? 'Berlin'
-          : meeting.id === 'm8'
-            ? 'München'
-            : meeting.id === 'm10'
-              ? 'Köln'
-              : meeting.id === 'm12'
-                ? 'Frankfurt'
-                : ['Berlin', 'Hamburg', 'München'][index % 3],
-}));
+import {
+  MeetingsSearchPage,
+  MeetingsSearchParams,
+  MeetingCardData,
+  MeetingCreationPayload,
+} from '../types/meeting';
+import { API_CONFIG } from '../config/api';
+import { getCookie } from '@/utils/cookies';
 
 export const fetchMeetings = async (
   params: MeetingsSearchParams = {}
 ): Promise<MeetingsSearchPage> => {
-  const {
-    page = 0,
-    size = DEFAULT_API_PAGE_SIZE,
-    searchTerm = '',
-    types = [],
-    location = '',
-    format,
-    startDate,
-    endDate,
-  } = params;
+  const queryParams = new URLSearchParams();
 
-  console.log(
-    '[API STUB meetings] Calling fetchMeetings with params:',
-    JSON.parse(JSON.stringify(params))
-  );
-  await new Promise((resolve) => setTimeout(resolve, 600));
+  if (params.page !== undefined) queryParams.append('page', params.page.toString());
+  if (params.size !== undefined) queryParams.append('size', params.size.toString());
+  if (params.searchTerm?.trim()) queryParams.append('searchTerm', params.searchTerm.trim());
 
-  let filteredMeetings = ALL_MOCK_MEETINGS_WITH_FILTER_DATA;
+  params.types?.forEach((type) => queryParams.append('types', type));
 
-  if (searchTerm.trim()) {
-    const lowerSearch = searchTerm.trim().toLowerCase();
-    filteredMeetings = filteredMeetings.filter(
-      (m) =>
-        m.title.toLowerCase().includes(lowerSearch) ||
-        m.shortDescription.toLowerCase().includes(lowerSearch)
-    );
+  if (params.location?.trim()) queryParams.append('location', params.location.trim());
+  if (params.format) queryParams.append('format', params.format);
+  if (params.startDate) queryParams.append('startDate', params.startDate);
+  if (params.endDate) queryParams.append('endDate', params.endDate);
+
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.searchMeetings}?${queryParams.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: 'Failed to parse error response from meeting search' }));
+    throw {
+      message: errorData.message || `Error searching meetings: ${response.statusText}`,
+      statusCode: response.status,
+    };
   }
-  if (types.length > 0) {
-    const lowerTypes = types.map((t) => t.toLowerCase());
-    filteredMeetings = filteredMeetings.filter((m) => lowerTypes.includes(m.type.toLowerCase()));
-  }
-  if (location) {
-    filteredMeetings = filteredMeetings.filter(
-      (m) => m.location?.toLowerCase() === location.toLowerCase()
-    );
-  }
-  if (format) {
-    filteredMeetings = filteredMeetings.filter((m) => m.format === format);
-  }
-  if (startDate)
-    console.log(
-      `[API STUB meetings] Filtering by startDate >= ${startDate} (not implemented in stub)`
-    );
-  if (endDate)
-    console.log(`[API STUB meetings] Filtering by endDate <= ${endDate} (not implemented in stub)`);
+  const data: MeetingsSearchPage = await response.json();
+  return data;
+};
 
-  console.log(
-    `[API STUB meetings] Filtered meetings count before pagination: ${filteredMeetings.length}`
-  );
-
-  const totalElements = filteredMeetings.length;
-  const totalPages = Math.ceil(totalElements / size);
-  const startIndex = page * size;
-  const content: MeetingCardData[] = filteredMeetings
-    .slice(startIndex, startIndex + size)
-    .map((m) => ({
-      id: m.id,
-      title: m.title,
-      shortDescription: m.shortDescription,
-      format: m.format,
-      type: m.type,
-      participantCount: m.participantCount,
-      maxParticipants: m.maxParticipants,
-      imageUrl: m.imageUrl,
-    }));
-
-  const mockPage: MeetingsSearchPage = {
-    content,
-    totalPages,
-    totalElements,
-    size,
-    number: page,
-    first: page === 0,
-    last: page >= totalPages - 1 || totalPages === 0,
-    empty: content.length === 0,
+export const createMeeting = async (payload: MeetingCreationPayload): Promise<MeetingCardData> => {
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.createMeeting}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
   };
-  console.log(
-    `[API STUB meetings] Returning page ${page + 1}/${totalPages}, items: ${content.length}`
-  );
-  return Promise.resolve(mockPage);
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  } else {
+    console.warn('CSRF token not found for createMeeting');
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: 'Failed to parse error response from create meeting' }));
+    throw {
+      message: errorData.message || `Error creating meeting: ${response.statusText}`,
+      statusCode: response.status,
+      validationErrors: errorData.errors,
+    };
+  }
+  const data: MeetingCardData = await response.json();
+  return data;
 };

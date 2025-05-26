@@ -1,5 +1,6 @@
 import { ComboboxOption } from '@/components/ui/comboBox';
 import { Gender } from '@/types/user';
+import { MeetingFormat } from '@/types/meeting';
 
 export interface GenderOption {
   id: Gender;
@@ -27,4 +28,15 @@ export const LOCATION_OPTIONS: readonly ComboboxOption[] = [
   { value: 'dresden', label: 'Dresden' },
   { value: 'hanover', label: 'Hannover' },
   { value: 'nuremberg', label: 'Nürnberg' },
+] as const;
+
+export const MEETING_FORMAT_OPTIONS: readonly ComboboxOption[] = [
+  { value: 'ALL_FORMATS_PLACEHOLDER', label: 'Alle Formate' },
+  { value: 'ONLINE', label: 'Online' },
+  { value: 'OFFLINE', label: 'Vor Ort' },
+] as const;
+
+export const MEETING_FORMAT_CREATION_OPTIONS: readonly { value: MeetingFormat; label: string }[] = [
+  { value: 'ONLINE', label: 'Online' },
+  { value: 'OFFLINE', label: 'Vor Ort' },
 ] as const;

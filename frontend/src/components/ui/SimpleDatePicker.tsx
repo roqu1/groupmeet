@@ -8,6 +8,7 @@ export interface SimpleDatePickerProps
   id?: string;
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
+  className?: string;
 }
 
 const SimpleDatePicker: React.FC<SimpleDatePickerProps> = ({
@@ -29,7 +30,9 @@ const SimpleDatePicker: React.FC<SimpleDatePickerProps> = ({
     }
   };
 
-  const formattedDate = selectedDate ? selectedDate.toLocaleDateString('en-CA') : '';
+  const formattedDate = selectedDate
+    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+    : '';
 
   return (
     <div>

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -95,13 +96,13 @@ public class MeetingService {
             }
 
             if (criteria.getStartDate() != null) {
-                LocalDateTime startDateTime = criteria.getStartDate().atStartOfDay();
+                LocalDateTime startDateTime = criteria.getStartDate().atTime(LocalTime.MIN);
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("dateTime"), startDateTime));
             }
 
             if (criteria.getEndDate() != null) {
-                LocalDateTime endDateTime = criteria.getEndDate().plusDays(1).atStartOfDay(); 
-                predicates.add(criteriaBuilder.lessThan(root.get("dateTime"), endDateTime));
+                LocalDateTime endDateTime = criteria.getEndDate().atTime(LocalTime.MAX);
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("dateTime"), endDateTime));
             }
             
             predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("dateTime"), LocalDateTime.now().minusHours(2)));

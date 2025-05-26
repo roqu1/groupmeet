@@ -18,5 +18,8 @@ export const API_CONFIG = {
     incomingFriendRequests: '/api/friends/requests/incoming',
     acceptFriendRequest: (requestId: number): string => `/api/friends/requests/${requestId}/accept`,
     rejectFriendRequest: (requestId: number): string => `/api/friends/requests/${requestId}/reject`,
+    createMeeting: '/api/meetings',
+    searchMeetings: '/api/meetings/search',
+    interests: '/api/interests',
   },
 } as const;

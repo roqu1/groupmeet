@@ -1,14 +1,27 @@
 import { Page } from './pagination';
+export type MeetingFormat = 'ONLINE' | 'OFFLINE';
 
 export interface MeetingCardData {
-  id: string;
+  id: number;
   title: string;
-  shortDescription: string;
-  format: 'ONLINE' | 'OFFLINE';
-  type: string;
+  description: string | null;
+  format: MeetingFormat;
+  meetingTypeName: string;
+  location?: string | null;
+  dateTime: string;
   participantCount: number;
+  maxParticipants?: number | null;
+  creatorUsername: string;
+}
+
+export interface MeetingCreationPayload {
+  title: string;
+  description?: string;
+  format: MeetingFormat;
+  meetingTypeName: string;
+  location?: string;
+  dateTime: string;
   maxParticipants?: number;
-  imageUrl?: string | null;
 }
 
 export interface MeetingsSearchParams {
@@ -17,7 +30,7 @@ export interface MeetingsSearchParams {
   searchTerm?: string;
   types?: string[];
   location?: string;
-  format?: 'ONLINE' | 'OFFLINE' | '';
+  format?: MeetingFormat | '';
   startDate?: string;
   endDate?: string;
 }
