@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useFriendsList } from '../hooks/friends/useFriendsList';
-import { useRemoveFriend } from '../hooks/friends/useRemoveFriend';
 import { Input } from '../components/ui/input';
 import { Button, buttonVariants } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -28,6 +27,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { cn } from '../lib/utils';
 import { Friend } from '../types/friend';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useRemoveFriend } from '@/hooks/friends/useRemoveFriend';
+import { useQueryClient } from '@tanstack/react-query';
 
 const PAGE_SIZE = 6;
 const DEBOUNCE_DELAY = 500;
@@ -38,6 +39,8 @@ const FriendsListPage = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
 
+  const queryClient = useQueryClient();
+
   const {
     data: friendsPage,
     isLoading,
@@ -46,7 +49,12 @@ const FriendsListPage = () => {
     isFetching,
   } = useFriendsList({ page: currentPage, pageSize: PAGE_SIZE, searchTerm: debouncedSearchTerm });
 
-  const { mutate: removeFriendMutate, isPending: isRemovingFriend } = useRemoveFriend();
+  const { mutate: removeFriendMutate, isPending: isRemovingFriend } = useRemoveFriend(() => {
+    queryClient.invalidateQueries({ queryKey: ['friends'] });
+    if (friendsPage?.content.length === 1 && currentPage > 0 && friendsPage.totalElements > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  });
 
   useEffect(() => {
     setCurrentPage(0);

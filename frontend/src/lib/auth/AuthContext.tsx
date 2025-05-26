@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
-import { ApiError, useHttp } from '../../hooks/useHttp';
-import { API_CONFIG } from '../../config/api';
-import { Gender } from '../../types/user';
+import { API_CONFIG } from '@/config/api';
+import { ApiError, useHttp } from '@/hooks/useHttp';
+import { Gender } from '@/types/user';
 
 // Define the structure of the user object based on AuthResponseDto
 export interface AuthUser {

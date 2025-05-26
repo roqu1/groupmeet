@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useHttp, ApiError } from '../useHttp';
-import { useAuth } from '../../context/AuthContext';
 import { API_CONFIG } from '../../config/api';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface LogoutResponse {
   message: string; // Matches backend MessageResponse

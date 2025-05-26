@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { useLogout } from '../hooks/auth/useLogout';
 import { Button } from './ui/button';
 import { LogOut, UserCircle, Loader2, Users, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 export default function Header() {
   const { isAuthenticated, currentUser, isLoading: isAuthLoading } = useAuth();
@@ -49,10 +49,11 @@ export default function Header() {
               </Link>
 
               <Link
-                to="/profile"
+                to={`/profile/${currentUser.id}`}
                 className="text-sm font-medium hover:text-primary flex items-center gap-1"
+                title="Mein Profil"
               >
-                <UserCircle className="h-4 w-4" /> Profil
+                <UserCircle className="h-4 w-4" /> <span className="hidden sm:inline">Profil</span>
               </Link>
               <Button
                 variant="ghost"

@@ -1,7 +1,9 @@
 package com.groupmeet.application.controller;
 
+import com.groupmeet.application.controller.AuthController.ErrorResponse;
 import com.groupmeet.application.controller.AuthController.MessageResponse;
 import com.groupmeet.application.dto.FriendDto;
+import com.groupmeet.application.dto.FriendRequestDto;
 import com.groupmeet.application.service.FriendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -65,10 +67,63 @@ public class FriendController {
         } catch (UsernameNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
         } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatusCode()).body(new AuthController.ErrorResponse(e.getReason()));
+            return ResponseEntity.status(e.getStatusCode()).body(new ErrorResponse(e.getReason()));
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Fehler beim Senden der Freundschaftsanfrage.", e);
+        }
+    }
+
+    @GetMapping("/requests/incoming")
+    public ResponseEntity<Page<FriendRequestDto>> getIncomingFriendRequests(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            Page<FriendRequestDto> requests = friendService.getIncomingFriendRequests(userDetails.getUsername(), pageable);
+            return ResponseEntity.ok(requests);
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @PutMapping("/requests/{requestId}/accept")
+    public ResponseEntity<?> acceptFriendRequest(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long requestId) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            friendService.acceptFriendRequest(userDetails.getUsername(), requestId);
+            return ResponseEntity.ok(new MessageResponse("Freundschaftsanfrage angenommen."));
+        } catch (FriendService.FriendRequestNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(e.getMessage()));
+        } catch (FriendService.InvalidFriendRequestOperationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Benutzerfehler."));
+        }
+    }
+
+    @DeleteMapping("/requests/{requestId}/reject")
+    public ResponseEntity<?> rejectFriendRequest(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long requestId) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            friendService.rejectFriendRequest(userDetails.getUsername(), requestId);
+            return ResponseEntity.ok(new MessageResponse("Freundschaftsanfrage abgelehnt/zurückgezogen."));
+        } catch (FriendService.FriendRequestNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(e.getMessage()));
+        } catch (FriendService.InvalidFriendRequestOperationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Benutzerfehler."));
         }
     }
 }
