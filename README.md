@@ -69,4 +69,4 @@ Please read the [Development Guide](docs/development.md) before contributing.
 
 ## License
 
-[MIT License](LICENSE)
+[GNU General Public License v3.0](LICENSE)
