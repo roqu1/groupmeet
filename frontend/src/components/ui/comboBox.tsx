@@ -19,7 +19,7 @@ export type ComboboxOption = {
 };
 
 interface ComboboxProps {
-  options: ComboboxOption[];
+  options: readonly ComboboxOption[];
   value: string;
   onSelect: (value: string) => void;
   placeholder?: string;
@@ -66,7 +66,11 @@ export function Combobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+          <CommandList
+            onWheel={(e) => {
+              e.stopPropagation();
+            }}
+          >
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (

@@ -54,14 +54,29 @@ CommandInput.displayName = CommandPrimitive.Input.displayName;
 
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn('max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
-    {...props}
-  />
-));
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List> & {
+    onWheel?: React.WheelEventHandler<HTMLDivElement>;
+  }
+>(({ className, onWheel, ...props }, ref) => {
+  const handleWheel = React.useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (onWheel) {
+        onWheel(e);
+      }
+      e.stopPropagation();
+    },
+    [onWheel]
+  );
+
+  return (
+    <CommandPrimitive.List
+      ref={ref}
+      className={cn('max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
+      onWheel={handleWheel}
+      {...props}
+    />
+  );
+});
 
 CommandList.displayName = CommandPrimitive.List.displayName;
 
