@@ -20,6 +20,7 @@ import { useRejectFriendRequest } from '@/hooks/friend-requests/useRejectFriendR
 import { useQueryClient } from '@tanstack/react-query';
 import { useRemoveFriend } from '@/hooks/friend-requests/useRemoveFriend';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -206,7 +207,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile, isOwnProfile }) 
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
         <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-2 border-primary">
           <AvatarImage
-            src={profile.avatarUrl ?? undefined}
+            src={getFullAvatarUrl(profile.avatarUrl)}
             alt={`${profile.firstName} ${profile.lastName}`}
           />
           <AvatarFallback className="text-3xl">

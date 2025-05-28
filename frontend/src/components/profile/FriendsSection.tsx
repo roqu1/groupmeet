@@ -4,6 +4,7 @@ import { FriendSummary } from '@/types/user';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MailWarning } from 'lucide-react';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 interface FriendsSectionProps {
   friendsCount: number;
@@ -57,7 +58,7 @@ const FriendsSection: React.FC<FriendsSectionProps> = ({
               title={`${friend.firstName} ${friend.lastName}`}
             >
               <Avatar className="h-16 w-16 mb-1 group-hover:scale-105 transition-transform">
-                <AvatarImage src={friend.avatarUrl ?? undefined} alt={friend.username} />
+                <AvatarImage src={getFullAvatarUrl(friend.avatarUrl)} alt={friend.username} />
                 <AvatarFallback>{getInitials(friend.firstName, friend.lastName)}</AvatarFallback>
               </Avatar>
               <span className="text-xs text-muted-foreground truncate w-full group-hover:text-primary">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchUserProfile, updateUserProfile, UserProfile } from '@/api/user-api';
@@ -23,6 +23,9 @@ interface FormErrors {
   server?: string;
 }
 
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 export const useEditProfile = () => {
   const [formData, setFormData] = useState<ProfileFormState>({
     firstName: '',
@@ -40,16 +43,9 @@ export const useEditProfile = () => {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   const navigate = useNavigate();
-
-  // Get current user information from authentication context
-  // This provides the user ID needed for constructing the correct profile URL after saving
-  const { currentUser } = useAuth();
-
-  // Access React Query's cache management system to ensure profile data stays synchronized
-  // This is crucial because your application uses different API endpoints for editing vs viewing profiles
+  const { currentUser, checkAuthStatus } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch user profile data on component mount
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
@@ -79,67 +75,75 @@ export const useEditProfile = () => {
     loadUserProfile();
   }, []);
 
-  // Form field handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear field-specific error when user types
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
-  const handleInterestsChange = (selectedInterests: string[]) => {
-    setFormData((prev) => ({ ...prev, interests: selectedInterests }));
+  const handleInterestsChange: React.Dispatch<React.SetStateAction<string[]>> = useCallback(
+    (valueOrUpdater) => {
+      setFormData((prevFormState) => {
+        const newInterests =
+          typeof valueOrUpdater === 'function'
+            ? valueOrUpdater(prevFormState.interests)
+            : valueOrUpdater;
+        return { ...prevFormState, interests: newInterests };
+      });
 
-    // Clear interests error if it exists
-    if (errors.interests) {
-      setErrors((prev) => ({ ...prev, interests: undefined }));
-    }
-  };
+      if (errors.interests) {
+        setErrors((prev) => ({ ...prev, interests: undefined }));
+      }
+    },
+    [errors.interests]
+  );
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setErrors((prev) => ({
+          ...prev,
+          profileImage: `Datei ist zu groß. Maximale Größe ist ${MAX_FILE_SIZE_MB}MB.`,
+        }));
+        e.target.value = '';
+        setFormData((prev) => ({ ...prev, profileImage: null }));
+        setProfileImageUrl(originalData?.avatarUrl || null);
+        return;
+      }
       setFormData((prev) => ({ ...prev, profileImage: file }));
       setProfileImageUrl(URL.createObjectURL(file));
-
-      // Clear the image error if it exists
       if (errors.profileImage) {
         setErrors((prev) => ({ ...prev, profileImage: undefined }));
       }
+    } else {
+      setFormData((prev) => ({ ...prev, profileImage: null }));
+      setProfileImageUrl(originalData?.avatarUrl || null);
     }
   };
 
-  // Form validation
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'Vorname ist erforderlich';
     }
-
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Nachname ist erforderlich';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!validateForm()) {
       return;
     }
 
     try {
       setIsSubmitting(true);
-
-      // Prepare form data for multipart/form-data submission
       const submitData = new FormData();
       submitData.append('firstName', formData.firstName);
       submitData.append('lastName', formData.lastName);
@@ -151,23 +155,30 @@ export const useEditProfile = () => {
         submitData.append('profileImage', formData.profileImage);
       }
 
-      await updateUserProfile(submitData);
+      const updatedProfileData = await updateUserProfile(submitData);
 
-      // Invalidate the cached profile data to ensure the viewing page displays updated information
-      // This step is critical because your edit and view operations use different API endpoints
-      // Without this cache invalidation, users would see stale data even after successful updates
       await queryClient.invalidateQueries({
         queryKey: ['userProfile', currentUser?.id?.toString()],
       });
+      await queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
 
-      // Redirect to the current user's specific profile page using the correct URL pattern
-      // This ensures compatibility with the GM-6 profile viewing integration
+      if (currentUser && currentUser.id === updatedProfileData.id) {
+        await checkAuthStatus();
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+      await queryClient.invalidateQueries({ queryKey: ['friends'] });
+
       navigate(`/profile/${currentUser?.id}`);
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
-      setErrors({
-        server: 'Fehler beim Aktualisieren des Profils. Bitte versuchen Sie es später erneut.',
-      });
+      let errorMessage =
+        'Fehler beim Aktualisieren des Profils. Bitte versuchen Sie es später erneut.';
+      if (error && error.message) {
+        errorMessage = error.message;
+      }
+      setErrors({ server: errorMessage });
     } finally {
       setIsSubmitting(false);
     }

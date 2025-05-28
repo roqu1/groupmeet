@@ -2,12 +2,13 @@ import { API_CONFIG } from '../config/api';
 import { getCookie } from '@/utils/cookies.ts';
 
 export interface UserProfile {
+  id: number;
   firstName: string;
   lastName: string;
   location: string | null;
   aboutMe: string | null;
   interests: string[];
-  avatarUrl?: string | null; // Changed from profileImageUrl
+  avatarUrl?: string | null;
 }
 
 export const fetchUserProfile = async (): Promise<UserProfile> => {
@@ -37,7 +38,6 @@ export const fetchUserProfile = async (): Promise<UserProfile> => {
 export const updateUserProfile = async (profileData: FormData): Promise<UserProfile> => {
   const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.currentUserProfile}`;
 
-  // Add CSRF token handling for security - this is required for data modification operations
   const csrfToken = getCookie('XSRF-TOKEN');
   const headers: HeadersInit = {};
   if (csrfToken) {
@@ -46,7 +46,7 @@ export const updateUserProfile = async (profileData: FormData): Promise<UserProf
 
   const response = await fetch(url, {
     method: 'PUT',
-    headers: headers, // Include the CSRF token in headers
+    headers: headers,
     credentials: 'include',
     body: profileData,
   });

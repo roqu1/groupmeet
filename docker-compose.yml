@@ -8,11 +8,12 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./backend/uploads:/app/uploads
       - ./frontend:/app
       - /app/node_modules
     environment:
       - VITE_API_URL=http://backend:8080
+    depends_on:
+      - backend
 
   backend:
     build: ./backend
@@ -20,6 +21,8 @@ services:
       - "8080:8080"
     depends_on:
       - db
+    volumes:
+      - ./backend/uploads:/app/uploads
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/groupmeet
       - SPRING_DATASOURCE_USERNAME=postgres

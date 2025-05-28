@@ -23,7 +23,7 @@ public class FriendDto {
                 user.getUsername(),
                 user.getFirstName(),
                 user.getLastName(),
-                null // TODO: Replace with actual avatar URL logic later when ProfileEditDto is implemented
+                user.getAvatarUrl()
         );
     }
 

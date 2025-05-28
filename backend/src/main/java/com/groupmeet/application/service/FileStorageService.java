@@ -1,10 +1,11 @@
 package com.groupmeet.application.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,85 +17,98 @@ import java.util.List;
 @Service
 public class FileStorageService {
 
+    private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
+
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    // Define supported image extensions for cleanup operations
     private static final List<String> SUPPORTED_EXTENSIONS = Arrays.asList(
-            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
-    );
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp");
 
-    /**
-     * Stores profile image using user ID-based naming and removes old images
-     * This implements roqu1's requirement: "Save the pictures with id of user in the folder
-     * and when the image will be changed, then remove the old image and save the new one"
-     */
     public String storeProfileImage(MultipartFile file, Long userId) throws IOException {
-        // Create profiles directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadDir, "profiles");
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
+        Path profilesUploadPath = Paths.get(uploadDir, "profiles");
+        logger.debug("Upload directory from config: {}", uploadDir);
+        logger.debug("Absolute profiles upload path: {}", profilesUploadPath.toAbsolutePath().toString());
+
+        if (!Files.exists(profilesUploadPath)) {
+            try {
+                Files.createDirectories(profilesUploadPath);
+            } catch (IOException e) {
+                logger.error("Failed to create profiles directory: {}", profilesUploadPath, e);
+                throw e;
+            }
         }
 
-        // Extract file extension from uploaded file
         String originalFilename = file.getOriginalFilename();
-        String fileExtension = originalFilename != null && originalFilename.contains(".") ?
-                originalFilename.substring(originalFilename.lastIndexOf(".")) : ".jpg";
+        String fileExtension;
 
-        // Create predictable filename using user ID: profile_[userId].[extension]
+        if (originalFilename != null && originalFilename.contains(".")) {
+            fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+            if (!SUPPORTED_EXTENSIONS.contains(fileExtension)) {
+                logger.warn("Invalid file type for userId: {}. Extension: {}. Original filename: {}", userId, fileExtension, originalFilename);
+                throw new IOException("Ungültiger Dateityp. Nur " + String.join(", ", SUPPORTED_EXTENSIONS) + " sind erlaubt.");
+            }
+        } else {
+            logger.warn("File for userId: {} has no valid extension or is not a supported image type. Original filename: {}", userId, originalFilename);
+            throw new IOException("Dateiname hat keine gültige Erweiterung oder ist kein unterstützter Bildtyp.");
+        }
+
         String fileName = "profile_" + userId + fileExtension;
-        Path targetLocation = uploadPath.resolve(fileName);
+        Path targetLocation = profilesUploadPath.resolve(fileName);
 
-        // Remove any existing profile image for this user before saving new one
-        deleteExistingProfileImage(userId, uploadPath);
+        deleteExistingProfileImage(userId, profilesUploadPath);
 
-        // Save the new image file
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-        // Return URL path for frontend access
-        return "/uploads/profiles/" + fileName;
+        try {
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            logger.error("Failed to store profile image for userId {} at {}: {}", userId, targetLocation, e.getMessage(), e);
+            throw e;
+        }
+        
+        String imageUrl = "/uploads/profiles/" + fileName;
+        return imageUrl;
     }
 
-    /**
-     * Removes existing profile image for a user across all supported formats
-     * This handles cases where user previously uploaded different image formats
-     */
     private void deleteExistingProfileImage(Long userId, Path uploadPath) {
+        logger.debug("Attempting to delete existing profile images for userId: {} in path: {}", userId, uploadPath.toAbsolutePath().toString());
+        boolean deletedAny = false;
         for (String extension : SUPPORTED_EXTENSIONS) {
             Path existingImagePath = uploadPath.resolve("profile_" + userId + extension);
             if (Files.exists(existingImagePath)) {
                 try {
                     Files.delete(existingImagePath);
-                    System.out.println("Deleted existing profile image: " + existingImagePath.getFileName());
-                    break; // Only delete first match since user should have one image
+                    deletedAny = true;
+                    break; 
                 } catch (IOException e) {
-                    System.err.println("Warning: Failed to delete existing image: " + e.getMessage());
+                    logger.warn("Warning: Failed to delete existing image: {}. Error: {}", existingImagePath, e.getMessage());
                 }
             }
+        }
+        if (!deletedAny) {
         }
     }
 
-    /**
-     * Completely removes a user's profile image (useful for account deletion)
-     */
     public boolean deleteUserProfileImage(Long userId) {
         if (userId == null) {
+            logger.warn("Attempted to delete profile image for null userId.");
             return false;
         }
-
         try {
-            Path uploadPath = Paths.get(uploadDir, "profiles");
-
+            Path profilesUploadPath = Paths.get(uploadDir, "profiles");
+            boolean deletedAny = false;
             for (String extension : SUPPORTED_EXTENSIONS) {
-                Path imagePath = uploadPath.resolve("profile_" + userId + extension);
+                Path imagePath = profilesUploadPath.resolve("profile_" + userId + extension);
                 if (Files.exists(imagePath)) {
                     Files.delete(imagePath);
-                    return true;
+                    deletedAny = true; 
+                    break;
                 }
             }
-            return false;
+            if (!deletedAny) {
+            }
+            return deletedAny;
         } catch (IOException e) {
-            System.err.println("Error deleting profile image for user " + userId + ": " + e.getMessage());
+            logger.error("Error deleting profile image(s) for user " + userId + ": " + e.getMessage(), e);
             return false;
         }
     }

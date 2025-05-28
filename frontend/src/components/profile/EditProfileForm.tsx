@@ -4,27 +4,33 @@ import { useEditProfile } from '@/hooks/profile/useEditProfile.ts';
 import { useInterestOptions } from '@/hooks/options/useInterestOptions.ts';
 import { useLocationOptions } from '@/hooks/options/useLocationOptions.ts';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { MultiSelect } from '../ui/multi-select';
+import { Combobox } from '../ui/comboBox';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 export const EditProfileForm: React.FC = () => {
-  // Fetch interest options using the existing pattern established by your team
+  const { currentUser } = useAuth();
+
   const {
     data: availableInterests,
     isLoading: interestsLoading,
     error: interestsError,
   } = useInterestOptions();
 
-  // Fetch location options using the same pattern as interests
   const {
     data: availableLocations,
     isLoading: locationsLoading,
     error: locationsError,
   } = useLocationOptions();
 
-  // Get profile form state and handlers from the existing useEditProfile hook
   const {
     formData,
     profileImageUrl,
-    isLoading,
+    originalData,
+    isLoading: profileLoading,
     isSubmitting,
     errors,
     handleInputChange,
@@ -33,133 +39,118 @@ export const EditProfileForm: React.FC = () => {
     handleSubmit,
   } = useEditProfile();
 
-  // Helper function that allows the dropdown to work with your existing form system
-  // This bridges the gap between HTMLSelectElement and your existing input handler
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const syntheticEvent = {
-      target: {
-        name: e.target.name,
-        value: e.target.value,
-      },
-    } as React.ChangeEvent<HTMLInputElement>;
-
-    handleInputChange(syntheticEvent);
+  const handleLocationSelect = (value: string) => {
+    handleInputChange({
+      target: { name: 'location', value },
+    } as React.ChangeEvent<HTMLInputElement>);
   };
 
-  // Enhanced loading state that coordinates multiple asynchronous data sources
-  if (isLoading || interestsLoading || locationsLoading) {
+  if (profileLoading || interestsLoading || locationsLoading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="spinner">Loading...</div>
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Lade Formulardaten...</span>
       </div>
     );
   }
 
-  // Comprehensive error handling that accounts for all possible failure modes
-  if (interestsError || !availableInterests || locationsError || !availableLocations) {
+  if (interestsError || locationsError || !availableInterests || !availableLocations) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="text-red-600">Error loading form data. Please try again later.</div>
+      <div className="flex flex-col items-center justify-center py-12 text-destructive">
+        <AlertTriangle className="h-8 w-8 mb-2" />
+        <span>Fehler beim Laden der Formulardaten. Bitte versuchen Sie es später erneut.</span>
+        {interestsError && <p className="text-sm">{interestsError.message}</p>}
+        {locationsError && <p className="text-sm">{locationsError.message}</p>}
       </div>
     );
   }
+
+  const displayAvatar = profileImageUrl?.startsWith('blob:')
+    ? profileImageUrl
+    : getFullAvatarUrl(originalData?.avatarUrl);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Profile Image */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">Profilbild</label>
+        <label htmlFor="profileImageUpload" className="block text-sm font-medium text-foreground">
+          Profilbild
+        </label>
         <div className="flex items-center space-x-5">
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-            {profileImageUrl ? (
-              <img src={profileImageUrl} alt="Profilbild" className="w-full h-full object-cover" />
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-muted flex items-center justify-center border border-border">
+            {displayAvatar ? (
+              <img src={displayAvatar} alt="Profilbild" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-gray-400">Kein Bild</span>
+              <span className="text-muted-foreground text-xs">Kein Bild</span>
             )}
           </div>
           <div>
-            <input
+            <Input
+              id="profileImageUpload"
               type="file"
-              accept="image/*"
+              accept="image/png, image/jpeg, image/gif, image/webp"
               onChange={handleImageChange}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
             />
             {errors.profileImage && (
-              <p className="mt-1 text-sm text-red-600">{errors.profileImage}</p>
+              <p className="mt-1 text-sm text-destructive">{errors.profileImage}</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Name Fields */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {/* First Name */}
+      <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="firstName" className="block text-sm font-medium text-foreground">
             Vorname*
           </label>
-          <input
+          <Input
             type="text"
             id="firstName"
             name="firstName"
             value={formData.firstName}
             onChange={handleInputChange}
-            className={`mt-1 block w-full rounded-md shadow-sm py-2 px-3 ${
-              errors.firstName
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-            }`}
+            className={errors.firstName ? 'border-destructive' : ''}
             required
           />
-          {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
+          {errors.firstName && <p className="mt-1 text-sm text-destructive">{errors.firstName}</p>}
         </div>
 
-        {/* Last Name */}
         <div className="space-y-1">
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="lastName" className="block text-sm font-medium text-foreground">
             Nachname*
           </label>
-          <input
+          <Input
             type="text"
             id="lastName"
             name="lastName"
             value={formData.lastName}
             onChange={handleInputChange}
-            className={`mt-1 block w-full rounded-md shadow-sm py-2 px-3 ${
-              errors.lastName
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-            }`}
+            className={errors.lastName ? 'border-destructive' : ''}
             required
           />
-          {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
+          {errors.lastName && <p className="mt-1 text-sm text-destructive">{errors.lastName}</p>}
         </div>
       </div>
 
-      {/* Location - Backend-driven dropdown instead of text input */}
       <div className="space-y-1">
-        <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="location-combobox" className="block text-sm font-medium text-foreground">
           Ort
         </label>
-        <select
-          id="location"
-          name="location"
+        <Combobox
+          id="location-combobox"
+          options={availableLocations}
           value={formData.location || ''}
-          onChange={handleSelectChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3"
-        >
-          <option value="">Wählen Sie einen Ort...</option>
-          {availableLocations.map((location) => (
-            <option key={location.value} value={location.value}>
-              {location.label}
-            </option>
-          ))}
-        </select>
+          onSelect={handleLocationSelect}
+          placeholder="Ort auswählen..."
+          searchPlaceholder="Ort suchen..."
+          emptyMessage="Kein Ort gefunden."
+          className={errors.location ? 'border-destructive' : ''}
+        />
+        {errors.location && <p className="mt-1 text-sm text-destructive">{errors.location}</p>}
       </div>
 
-      {/* About Me */}
       <div className="space-y-1">
-        <label htmlFor="aboutMe" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="aboutMe" className="block text-sm font-medium text-foreground">
           Über mich
         </label>
         <textarea
@@ -168,44 +159,36 @@ export const EditProfileForm: React.FC = () => {
           rows={4}
           value={formData.aboutMe}
           onChange={handleInputChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3"
+          className={`mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-ring py-2 px-3 sm:text-sm ${errors.aboutMe ? 'border-destructive' : ''}`}
         />
+        {errors.aboutMe && <p className="mt-1 text-sm text-destructive">{errors.aboutMe}</p>}
       </div>
 
-      {/* Interests - Using existing interest system instead of hardcoded array */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">Meine Interessen</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {availableInterests.map((interest) => (
-            <div key={interest.value} className="flex items-start">
-              <input
-                type="checkbox"
-                id={`interest-${interest.value}`}
-                checked={formData.interests.includes(interest.value)}
-                onChange={(e) => {
-                  const newInterests = e.target.checked
-                    ? [...formData.interests, interest.value]
-                    : formData.interests.filter((i: string) => i !== interest.value);
-                  handleInterestsChange(newInterests);
-                }}
-                className="mt-0.5 mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor={`interest-${interest.value}`} className="text-sm text-gray-700">
-                {interest.label}
-              </label>
-            </div>
-          ))}
-        </div>
-        {errors.interests && <p className="mt-1 text-sm text-red-600">{errors.interests}</p>}
+      <div className="space-y-1">
+        <label
+          htmlFor="interests-multiselect"
+          className="block text-sm font-medium text-foreground"
+        >
+          Meine Interessen
+        </label>
+        <MultiSelect
+          id="interests-multiselect"
+          options={availableInterests}
+          selected={formData.interests}
+          onValueChange={handleInterestsChange}
+          placeholder="Interessen auswählen..."
+          className={errors.interests ? 'border-destructive' : ''}
+        />
+        {errors.interests && <p className="mt-1 text-sm text-destructive">{errors.interests}</p>}
       </div>
 
-      {/* Server Error Message */}
       {errors.server && (
-        <div className="rounded-md bg-red-50 p-4">
+        <div className="rounded-md bg-destructive/10 p-4 border border-destructive/30">
           <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Fehler</h3>
-              <div className="mt-2 text-sm text-red-700">
+            <AlertTriangle className="h-5 w-5 text-destructive mr-2 flex-shrink-0" />
+            <div className="ml-1">
+              <h3 className="text-sm font-medium text-destructive">Fehler</h3>
+              <div className="mt-1 text-sm text-destructive/90">
                 <p>{errors.server}</p>
               </div>
             </div>
@@ -213,15 +196,19 @@ export const EditProfileForm: React.FC = () => {
         </div>
       )}
 
-      {/* Form Buttons */}
-      <div className="flex justify-end space-x-3 pt-4">
-        <Link to="/profile">
-          <Button variant="outline" type="button" disabled={isSubmitting}>
-            Abbrechen
-          </Button>
-        </Link>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Wird gespeichert...' : 'Speichern'}
+      <div className="flex justify-end space-x-3 pt-5 border-t border-border mt-8">
+        <Button asChild variant="outline" type="button" disabled={isSubmitting}>
+          <Link to={currentUser ? `/profile/${currentUser.id}` : '/profile'}>Abbrechen</Link>
+        </Button>
+        <Button type="submit" disabled={isSubmitting || profileLoading}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Wird gespeichert...
+            </>
+          ) : (
+            'Speichern'
+          )}
         </Button>
       </div>
     </form>

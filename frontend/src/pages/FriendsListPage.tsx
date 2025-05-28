@@ -4,6 +4,7 @@ import { useFriendsList } from '../hooks/friends/useFriendsList';
 import { Input } from '../components/ui/input';
 import { Button, buttonVariants } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 import {
   Pagination,
   PaginationContent,
@@ -131,7 +132,7 @@ const FriendsListPage = () => {
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Avatar className="h-10 w-10 flex-shrink-0">
                   <AvatarImage
-                    src={friend.avatarUrl ?? undefined}
+                    src={getFullAvatarUrl(friend.avatarUrl)}
                     alt={`${friend.firstName} ${friend.lastName}`}
                   />
                   <AvatarFallback>
