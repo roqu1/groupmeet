@@ -8,6 +8,7 @@ import { useAcceptFriendRequest } from '@/hooks/friend-requests/useAcceptFriendR
 import { useRejectFriendRequest } from '@/hooks/friend-requests/useRejectFriendRequest';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 interface FriendRequestCardProps {
   request: FriendRequest;
@@ -37,7 +38,10 @@ const FriendRequestCard: React.FC<FriendRequestCardProps> = ({ request }) => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-card border border-border rounded-lg shadow-sm gap-3">
       <div className="flex items-center gap-3 flex-grow min-w-0">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={request.senderAvatarUrl ?? undefined} alt={request.senderUsername} />
+          <AvatarImage
+            src={getFullAvatarUrl(request.senderAvatarUrl)}
+            alt={request.senderUsername}
+          />
           <AvatarFallback>
             {getInitials(request.senderFirstName, request.senderLastName)}
           </AvatarFallback>

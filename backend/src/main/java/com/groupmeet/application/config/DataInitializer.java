@@ -1,4 +1,3 @@
-// backend/src/main/java/com/groupmeet/application/config/DataInitializer.java
 package com.groupmeet.application.config;
 
 import com.groupmeet.application.model.Interest;
@@ -9,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import com.groupmeet.application.model.Location;
+import com.groupmeet.application.repository.LocationRepository;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,6 +22,9 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private InterestRepository interestRepository;
 
+    @Autowired
+    private LocationRepository locationRepository;
+
     public static final List<String> PREDEFINED_INTERESTS = Arrays.asList(
             "Sport", "Musik", "Reisen", "Kochen", "Filme", "Lesen",
             "Technologie", "Kunst", "Fotografie", "Gaming", "Wandern",
@@ -28,10 +32,16 @@ public class DataInitializer implements CommandLineRunner {
             "Geschichte", "Theater", "Mode", "Autos", "Natur", "Politik",
             "Ehrenamt", "Tiere", "Handwerk");
 
+    public static final List<String> PREDEFINED_LOCATIONS = Arrays.asList(
+            "Berlin", "Hamburg", "Bremen", "München", "Köln", "Frankfurt am Main",
+            "Stuttgart", "Düsseldorf", "Dortmund", "Essen", "Leipzig", "Dresden",
+            "Hannover", "Nürnberg");
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
         seedInterests();
+        seedLocations();
     }
 
     private void seedInterests() {
@@ -69,6 +79,46 @@ public class DataInitializer implements CommandLineRunner {
                 logger.info(
                         "No new interests added from the predefined list ({} total predefined valid items). They likely already exist or the list was empty. Current total interests in DB: {}",
                         PREDEFINED_INTERESTS.stream().filter(s -> s != null && !s.trim().isEmpty()).count(),
+                        countAfter);
+            }
+        }
+    }
+
+    private void seedLocations() {
+        long countBefore = locationRepository.count();
+        long addedThisRun = 0;
+
+        if (PREDEFINED_LOCATIONS.isEmpty()) {
+            logger.info("Predefined location list is empty. No locations to seed. Current location count in DB: {}",
+                    countBefore);
+            return;
+        }
+
+        for (String locationName : PREDEFINED_LOCATIONS) {
+            if (locationName == null || locationName.trim().isEmpty()) {
+                logger.warn("Skipping null or empty location name in PREDEFINED_LOCATIONS.");
+                continue;
+            }
+            if (locationRepository.findByNameIgnoreCase(locationName.trim()).isEmpty()) {
+                locationRepository.save(new Location(locationName.trim()));
+                addedThisRun++;
+                logger.debug("Saved new location: {}", locationName.trim());
+            }
+        }
+
+        long countAfter = locationRepository.count();
+
+        if (addedThisRun > 0) {
+            logger.info("Seeded {} new locations. Total locations in DB now: {}", addedThisRun, countAfter);
+        } else {
+            if (countBefore == 0 && !PREDEFINED_LOCATIONS.stream().allMatch(s -> s == null || s.trim().isEmpty())) {
+                logger.warn(
+                        "Predefined locations list contains items, but no new locations were added and the table remains empty ({} total). This is unexpected. Please check predefined location values and database behavior.",
+                        countAfter);
+            } else {
+                logger.info(
+                        "No new locations added from the predefined list ({} total predefined valid items). They likely already exist or the list was empty. Current total locations in DB: {}",
+                        PREDEFINED_LOCATIONS.stream().filter(s -> s != null && !s.trim().isEmpty()).count(),
                         countAfter);
             }
         }

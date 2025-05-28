@@ -4,6 +4,7 @@ import { UserSearchResult, Gender } from '@/types/user';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { UserPlus, CheckCircle, Clock, Loader2, Venus, Mars, VenusAndMars } from 'lucide-react';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 interface UserSearchCardProps {
   user: UserSearchResult;
@@ -84,7 +85,7 @@ const UserSearchCard: React.FC<UserSearchCardProps> = ({ user, onAddFriend, isAd
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
           <AvatarImage
-            src={user.avatarUrl ?? undefined}
+            src={getFullAvatarUrl(user.avatarUrl)}
             alt={`${user.firstName} ${user.lastName}`}
           />
           <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>

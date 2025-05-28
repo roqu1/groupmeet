@@ -25,6 +25,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -32,6 +35,8 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthFilter;
@@ -64,14 +69,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName(null); // We dont use csrf in the request body like <input
-                                                          // type="hidden" name="_csrf" value="${_csrf.token}"/>
-                                                          // (Thymeleaf)
+        // type="hidden" name="_csrf" value="${_csrf.token}"/>
+        // (Thymeleaf)
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // Creates XSRF-TOKEN cookie
-                                                                                            // readable by JS
+                        // readable by JS
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(
                                 new AntPathRequestMatcher("/**", "GET"),
@@ -97,17 +102,23 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         List<String> allowedOrigins = new ArrayList<>();
         allowedOrigins.add(localUrl);
+
+        // Add environment-specific origins
         if ("docker".equals(environment)) {
             allowedOrigins.add(dockerUrl);
         } else if ("production".equals(environment)) {
             allowedOrigins.add(productionUrl);
         }
-        System.out.println("Allowed CORS Origins: " + allowedOrigins);
+
+        logger.info("Allowed CORS Origins: {}", allowedOrigins);
 
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*")); // "*" includes X-XSRF-TOKEN
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true); // This is crucial for cookie-based auth
+
+        logger.info("CORS Configuration - Allow Credentials: {}", configuration.getAllowCredentials());
+        logger.info("CORS Configuration - Allowed Methods: {}", configuration.getAllowedMethods());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
