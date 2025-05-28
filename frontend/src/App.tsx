@@ -14,6 +14,9 @@ import { ToastContainer } from 'react-toastify';
 import UserProfilePage from './pages/UserProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
 import FriendRequestsPage from './pages/FriendRequestsPage';
+import GroupDetailsPage from './pages/GroupDetailsPage';
+import 'react-toastify/dist/ReactToastify.css';
+import GroupParticipantsListPage from './pages/GroupParticipantsListPage';
 
 function App() {
   return (
@@ -37,12 +40,25 @@ function App() {
             <Route path="/profile/:userId" element={<UserProfilePage />} />
             <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/friend-requests" element={<FriendRequestsPage />} />
+            <Route path="/groups/:groupId" element={<GroupDetailsPage />} />
+            <Route path="/groups/:groupId/participants" element={<GroupParticipantsListPage />} />
           </Route>
 
           {/* ToDo: Not found page */}
         </Routes>
       </main>
-      <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     </>
   );
 }
