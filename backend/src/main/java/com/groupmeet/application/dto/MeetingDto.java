@@ -1,16 +1,19 @@
 package com.groupmeet.application.dto;
 
+import com.groupmeet.application.model.Interest;
 import com.groupmeet.application.model.Meeting;
 import com.groupmeet.application.model.MeetingFormat;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class MeetingDto {
     private Long id;
     private String title;
     private String description;
     private MeetingFormat format;
-    private String meetingTypeName;
+    private List<String> meetingTypeNames;
     private String location;
     private LocalDateTime dateTime;
     private int participantCount;
@@ -27,8 +30,14 @@ public class MeetingDto {
         dto.setTitle(meeting.getTitle());
         dto.setDescription(meeting.getDescription());
         dto.setFormat(meeting.getFormat());
-        if (meeting.getMeetingType() != null) {
-            dto.setMeetingTypeName(meeting.getMeetingType().getName());
+        if (meeting.getMeetingTypes() != null && !meeting.getMeetingTypes().isEmpty()) {
+            dto.setMeetingTypeNames(
+                meeting.getMeetingTypes().stream()
+                        .map(Interest::getName)
+                        .collect(Collectors.toList())
+            );
+        } else {
+            dto.setMeetingTypeNames(List.of());
         }
         dto.setLocation(meeting.getLocation());
         dto.setDateTime(meeting.getDateTime());
@@ -40,7 +49,6 @@ public class MeetingDto {
         dto.setCreatedAt(meeting.getCreatedAt());
         return dto;
     }
-
 
     public Long getId() {
         return id;
@@ -74,12 +82,12 @@ public class MeetingDto {
         this.format = format;
     }
 
-    public String getMeetingTypeName() {
-        return meetingTypeName;
+    public List<String> getMeetingTypeNames() {
+        return meetingTypeNames;
     }
 
-    public void setMeetingTypeName(String meetingTypeName) {
-        this.meetingTypeName = meetingTypeName;
+    public void setMeetingTypeNames(List<String> meetingTypeNames) {
+        this.meetingTypeNames = meetingTypeNames;
     }
 
     public String getLocation() {

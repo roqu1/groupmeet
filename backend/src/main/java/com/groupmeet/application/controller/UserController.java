@@ -17,8 +17,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.http.HttpStatus;
+import com.groupmeet.application.dto.UserProfileMeetingDto;
+import com.groupmeet.application.service.MeetingService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +36,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private MeetingService meetingService;
 
     @GetMapping("/search")
     public ResponseEntity<Page<UserSearchResultDto>> searchUsers(
@@ -71,6 +81,22 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Fehler beim Abrufen des Benutzerprofils: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{userId}/meetings")
+    public ResponseEntity<Page<UserProfileMeetingDto>> getUserMeetings(
+            @PathVariable Long userId,
+            @PageableDefault(size = 5, sort = "dateTime", direction = Sort.Direction.ASC) Pageable pageable,
+            @AuthenticationPrincipal UserDetails viewerDetails) {
+        try {
+            Page<UserProfileMeetingDto> meetings = meetingService.getUserParticipatedMeetings(userId, pageable);
+            return ResponseEntity.ok(meetings);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
         }
     }
 }
