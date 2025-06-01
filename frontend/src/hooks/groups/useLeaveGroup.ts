@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { leaveGroup } from '../../api/groups';
+import { leaveGroup as leaveGroupApi } from '../../api/groups';
+import { ApiError } from '../useHttp';
 
 interface LeaveGroupData {
   message: string;
 }
-type LeaveGroupError = Error;
+
+type LeaveGroupError = ApiError;
 type LeaveGroupVariables = string;
 
 export const useLeaveGroup = (): UseMutationResult<
@@ -16,10 +18,13 @@ export const useLeaveGroup = (): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation<LeaveGroupData, LeaveGroupError, LeaveGroupVariables>({
-    mutationFn: (groupId: LeaveGroupVariables) => leaveGroup(groupId),
+    mutationFn: (groupId: LeaveGroupVariables) => leaveGroupApi(groupId),
     onSuccess: (data, groupId) => {
       toast.success(data.message || 'Gruppe erfolgreich verlassen!');
       queryClient.invalidateQueries({ queryKey: ['groupDetails', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groupParticipants', { groupId }] });
+      queryClient.invalidateQueries({ queryKey: ['userMeetings', undefined] });
+      queryClient.invalidateQueries({ queryKey: ['meetingsSearch'] });
     },
     onError: (error: LeaveGroupError, groupId) => {
       console.error(`Error leaving group ID: ${groupId}`, error);

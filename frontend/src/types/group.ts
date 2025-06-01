@@ -1,32 +1,32 @@
 import { Page } from './pagination';
 
-export interface GroupParticipant {
-  id: number;
-  username: string;
-  firstName: string;
-  lastName: string;
-  avatarUrl: string | null;
-  isOrganizer: boolean;
-  gender?: Gender;
-}
-
 export type Gender = 'MALE' | 'FEMALE' | 'DIVERS';
 
-export type GroupMembershipStatus = 'MEMBER' | 'NOT_MEMBER' | 'PENDING';
+export interface MeetingParticipantPreview {
+  id: number;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  isOrganizer: boolean;
+}
+
+export type CurrentUserMeetingMembershipStatus = 'MEMBER' | 'NOT_MEMBER';
 
 export interface GroupDetails {
-  id: string;
-  name: string;
-  description: string;
+  id: number;
+  title: string;
+  description: string | null;
   dateTime: string;
-  location: string;
-  address: string;
-  tags: string[];
-  organizer: GroupParticipant;
-  participantsPreview: GroupParticipant[];
+  location: string | null;
+  format: 'ONLINE' | 'OFFLINE';
+  meetingTypeNames: string[];
+  organizer: MeetingParticipantPreview;
+  participantsPreview: MeetingParticipantPreview[];
   totalParticipants: number;
-  currentUserMembership: GroupMembershipStatus;
-  isCurrentUserOrganizer: boolean;
+  maxParticipants: number | null;
+  currentUserMembership: CurrentUserMeetingMembershipStatus;
+  currentUserOrganizer: boolean;
+  participantCount: number;
 }
 
 export interface GroupParticipant {
@@ -36,7 +36,8 @@ export interface GroupParticipant {
   lastName: string;
   avatarUrl: string | null;
   isOrganizer: boolean;
-  gender?: Gender;
+  gender: Gender;
+  participationStatus: 'ACTIVE' | 'BLOCKED';
 }
 
 export interface GroupParticipantsData {

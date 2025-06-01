@@ -9,6 +9,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import ProfileHeader from '@/components/ProfileHeader';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/lib/auth/AuthContext';
+import UserMeetingsSection from '@/components/profile/UserMeetingsSection';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -78,6 +79,7 @@ const UserProfilePage: React.FC = () => {
           isOwnProfile={isOwnProfile}
           profileUserId={profile.id}
         />
+        {userId && <UserMeetingsSection userId={userId} isOwnProfile={isOwnProfile} />}
       </div>
     </div>
   );

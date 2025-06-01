@@ -26,8 +26,7 @@ export const useSendFriendRequest = (
   >({
     mutationFn: (userId: SendFriendRequestVariables) => sendFriendRequest(userId),
 
-    onSuccess: (data, variables) => {
-      console.log(`Successfully sent friend request to user ID: ${variables}`, data);
+    onSuccess: (data) => {
       toast.success(data.message || 'Freundschaftsanfrage gesendet!');
 
       queryClient.invalidateQueries({ queryKey: ['userSearch'] });
@@ -39,7 +38,6 @@ export const useSendFriendRequest = (
     },
 
     onSettled: () => {
-      console.log('Send friend request mutation settled.');
       if (onSettledCallback) {
         onSettledCallback();
       }

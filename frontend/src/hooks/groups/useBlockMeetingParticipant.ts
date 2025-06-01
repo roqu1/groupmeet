@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { blockGroupParticipant } from '../../api/groups';
+import { blockMeetingParticipantApi } from '../../api/groups';
 import { GroupParticipantActionResponse } from '../../types/group';
 
-type BlockParticipantError = Error;
+type BlockParticipantError = Error & { statusCode?: number };
 interface BlockParticipantVariables {
-  groupId: string;
+  meetingId: string;
   userId: number;
 }
 
-export const useBlockGroupParticipant = (
+export const useBlockMeetingParticipant = (
   onSettledCallback?: () => void
 ): UseMutationResult<
   GroupParticipantActionResponse,
@@ -22,12 +22,13 @@ export const useBlockGroupParticipant = (
     BlockParticipantError,
     BlockParticipantVariables
   >({
-    mutationFn: ({ groupId, userId }) => blockGroupParticipant(groupId, userId),
+    mutationFn: ({ meetingId, userId }) => blockMeetingParticipantApi(meetingId, userId),
     onSuccess: (data, variables) => {
       toast.success(data.message);
       queryClient.invalidateQueries({
-        queryKey: ['groupParticipants', { groupId: variables.groupId }],
+        queryKey: ['groupParticipants', { groupId: variables.meetingId }],
       });
+      queryClient.invalidateQueries({ queryKey: ['groupDetails', variables.meetingId] });
     },
     onError: (error, variables) => {
       toast.error(`Fehler beim Sperren von Benutzer ${variables.userId}: ${error.message}`);

@@ -1,191 +1,37 @@
 import {
   GroupDetails,
   GroupParticipant,
-  GroupMembershipStatus,
   GroupParticipantsData,
   FetchGroupParticipantsParams,
   GroupParticipantActionResponse,
-  Gender,
 } from '../types/group';
 import { Page } from '../types/pagination';
-
-const mockOrganizerBase: Omit<GroupParticipant, 'isOrganizer' | 'gender'> = {
-  id: 103,
-  username: 'react_fan',
-  firstName: 'Lukas',
-  lastName: 'Müller',
-  avatarUrl: 'https://i.pravatar.cc/40?u=lukas',
-};
-
-const ALL_POSSIBLE_PARTICIPANTS_BASE: Omit<GroupParticipant, 'isOrganizer' | 'gender'>[] = [
-  {
-    id: 1,
-    username: 'sergeip',
-    firstName: 'Sergei',
-    lastName: 'Pron',
-    avatarUrl: 'https://i.pravatar.cc/40?u=sergei',
-  },
-  { id: 101, username: 'cool_cat', firstName: 'Felix', lastName: 'Meier', avatarUrl: null },
-  {
-    id: 102,
-    username: 'js_guru',
-    firstName: 'Anna',
-    lastName: 'Schmidt',
-    avatarUrl: 'https://i.pravatar.cc/40?u=anna',
-  },
-  {
-    id: 103,
-    username: 'react_fan',
-    firstName: 'Lukas',
-    lastName: 'Müller',
-    avatarUrl: 'https://i.pravatar.cc/40?u=lukas',
-  },
-  {
-    id: 104,
-    username: 'test_user_4',
-    firstName: 'Sophia',
-    lastName: 'Weber',
-    avatarUrl: 'https://i.pravatar.cc/40?u=sophia',
-  },
-  { id: 105, username: 'another_one', firstName: 'Max', lastName: 'Bauer', avatarUrl: null },
-  {
-    id: 106,
-    username: 'db_expert',
-    firstName: 'David',
-    lastName: 'Wagner',
-    avatarUrl: 'https://i.pravatar.cc/40?u=david',
-  },
-  {
-    id: 107,
-    username: 'css_wizard',
-    firstName: 'Marie',
-    lastName: 'Becker',
-    avatarUrl: 'https://i.pravatar.cc/40?u=marie',
-  },
-  { id: 108, username: 'node_ninja', firstName: 'Jonas', lastName: 'Hoffmann', avatarUrl: null },
-  {
-    id: 109,
-    username: 'ux_queen',
-    firstName: 'Lea',
-    lastName: 'Schäfer',
-    avatarUrl: 'https://i.pravatar.cc/40?u=lea',
-  },
-  {
-    id: 110,
-    username: 'java_jedi',
-    firstName: 'Finn',
-    lastName: 'Koch',
-    avatarUrl: 'https://i.pravatar.cc/40?u=finn',
-  },
-  {
-    id: 111,
-    username: 'pythonista',
-    firstName: 'Mia',
-    lastName: 'Fischer',
-    avatarUrl: 'https://i.pravatar.cc/40?u=mia',
-  },
-  { id: 112, username: 'docker_dan', firstName: 'Leon', lastName: 'Schneider', avatarUrl: null },
-  {
-    id: 113,
-    username: 'cloud_carla',
-    firstName: 'Clara',
-    lastName: 'Meyer',
-    avatarUrl: 'https://i.pravatar.cc/40?u=clara',
-  },
-  { id: 201, username: 'search_user_1', firstName: 'Hans', lastName: 'Zimmer', avatarUrl: null },
-  {
-    id: 202,
-    username: 'tester_abc',
-    firstName: 'Petra',
-    lastName: 'Pan',
-    avatarUrl: 'https://i.pravatar.cc/40?u=petra',
-  },
-  { id: 203, username: 'user203', firstName: 'User', lastName: 'Three', avatarUrl: null },
-  {
-    id: 204,
-    username: 'user204',
-    firstName: 'User',
-    lastName: 'Four',
-    avatarUrl: 'https://i.pravatar.cc/40?u=user204',
-  },
-  { id: 205, username: 'user205', firstName: 'User', lastName: 'Five', avatarUrl: null },
-];
-
-const mockGroupMembershipDB: Record<string, GroupMembershipStatus> = {
-  '123': 'MEMBER',
-  abc: 'NOT_MEMBER',
-};
-
-const MOCK_CURRENT_USER_ID = 103;
-
-const createFullParticipant = (
-  baseParticipant: Omit<GroupParticipant, 'isOrganizer' | 'gender'>,
-  organizerIdForThisGroup: number
-): GroupParticipant => {
-  let gender: Gender;
-  if (baseParticipant.id % 4 === 0) {
-    gender = 'DIVERS';
-  } else if (baseParticipant.id % 2 === 0) {
-    gender = 'FEMALE';
-  } else {
-    gender = 'MALE';
-  }
-
-  return {
-    ...baseParticipant,
-    gender: gender,
-    isOrganizer: baseParticipant.id === organizerIdForThisGroup,
-  };
-};
+import { API_CONFIG } from '../config/api';
+import { getCookie } from '@/utils/cookies';
 
 export const fetchGroupDetails = async (groupId: string): Promise<GroupDetails> => {
-  console.log(`[API STUB] fetchGroupDetails called for ID: ${groupId}`);
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.meetingDetails(groupId)}`;
 
-  if (groupId === 'error')
-    throw new Error(`Gruppe mit ID "${groupId}" konnte nicht geladen werden (simulierter Fehler).`);
-  if (groupId === 'notfound') throw new Error(`Gruppe mit ID "${groupId}" nicht gefunden.`);
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'include',
+  });
 
-  const actualOrganizerBaseData =
-    groupId === '123' || groupId === 'abc' ? mockOrganizerBase : ALL_POSSIBLE_PARTICIPANTS_BASE[0];
-  const actualOrganizer = createFullParticipant(
-    actualOrganizerBaseData,
-    actualOrganizerBaseData.id
-  );
-  actualOrganizer.isOrganizer = true;
-
-  const isCurrentUserActualOrganizer = actualOrganizer.id === MOCK_CURRENT_USER_ID;
-  let membershipStatus = mockGroupMembershipDB[groupId];
-  if (isCurrentUserActualOrganizer) {
-    membershipStatus = 'MEMBER';
-  } else if (mockGroupMembershipDB[groupId] === undefined) {
-    membershipStatus = 'NOT_MEMBER';
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: 'Failed to parse error response from group details' }));
+    throw {
+      message: errorData.message || `Error fetching group details: ${response.statusText}`,
+      statusCode: response.status,
+    };
   }
-  console.log(
-    `[API STUB] For groupId ${groupId}, current user (${MOCK_CURRENT_USER_ID}) membership is: ${membershipStatus}, isCurrentUserActualOrganizer: ${isCurrentUserActualOrganizer}`
-  );
-
-  const groupParticipantsForPreview = ALL_POSSIBLE_PARTICIPANTS_BASE.filter(
-    (p) => p.id !== 201 && p.id !== 202
-  )
-    .slice(0, 6)
-    .map((p) => createFullParticipant(p, actualOrganizer.id));
-
-  const groupData: GroupDetails = {
-    id: groupId,
-    name: `Tech Meetup #${groupId}`,
-    description: `Willkommen beim Tech Meetup #${groupId}! Thema heute: Neueste Entwicklungen in der Web-Technologie.`,
-    dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    location: 'Innovationszentrum TechPark',
-    address: 'Silicon Allee 1, 10115 Berlin',
-    tags: ['WebDev', 'TypeScript', 'React', 'Node.js'],
-    organizer: actualOrganizer,
-    participantsPreview: groupParticipantsForPreview,
-    totalParticipants: ALL_POSSIBLE_PARTICIPANTS_BASE.length - 5,
-    currentUserMembership: membershipStatus,
-    isCurrentUserOrganizer: isCurrentUserActualOrganizer,
-  };
-  return Promise.resolve(groupData);
+  const data: GroupDetails = await response.json();
+  return data;
 };
 
 export const fetchGroupParticipants = async ({
@@ -194,88 +40,267 @@ export const fetchGroupParticipants = async ({
   size = 10,
   searchTerm = '',
 }: FetchGroupParticipantsParams): Promise<GroupParticipantsData> => {
-  console.log(
-    `[API STUB] Fetching participants for group ID: ${groupId}, page: ${page}, size: ${size}`
-  );
-  await new Promise((resolve) => setTimeout(resolve, 750));
-
-  const actualOrganizerBaseData =
-    groupId === '123' || groupId === 'abc' ? mockOrganizerBase : ALL_POSSIBLE_PARTICIPANTS_BASE[0];
-  const isCurrentUserActualOrganizer = actualOrganizerBaseData.id === MOCK_CURRENT_USER_ID;
-  const groupName = `Tech Meetup #${groupId}`;
-
-  let allGroupParticipants: GroupParticipant[] = ALL_POSSIBLE_PARTICIPANTS_BASE.filter(
-    (p) => p.id !== 205
-  ).map((p) => createFullParticipant(p, actualOrganizerBaseData.id));
-
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+  });
   if (searchTerm.trim()) {
-    const lowerSearch = searchTerm.trim().toLowerCase();
-    console.log(`[API STUB] Applying searchTerm filter for participants: "${lowerSearch}"`);
-    allGroupParticipants = allGroupParticipants.filter(
-      (p) =>
-        p.username.toLowerCase().includes(lowerSearch) ||
-        p.firstName.toLowerCase().includes(lowerSearch) ||
-        p.lastName.toLowerCase().includes(lowerSearch)
-    );
+    queryParams.append('searchTerm', searchTerm.trim());
   }
 
-  const totalElements = allGroupParticipants.length;
-  const totalPages = Math.ceil(totalElements / size);
-  const startIndex = page * size;
-  const content = allGroupParticipants.slice(startIndex, startIndex + size);
+  const participantsUrl = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.meetingParticipants(groupId)}?${queryParams.toString()}`;
 
-  const participantsPage: Page<GroupParticipant> = {
-    content,
-    totalPages,
-    totalElements,
-    size,
-    number: page,
-    first: page === 0,
-    last: page >= totalPages - 1 || totalPages === 0,
-    empty: content.length === 0,
+  const participantsResponse = await fetch(participantsUrl, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!participantsResponse.ok) {
+    const errorData = await participantsResponse
+      .json()
+      .catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message:
+        errorData.message || `Error fetching participants: ${participantsResponse.statusText}`,
+      statusCode: participantsResponse.status,
+    };
+  }
+
+  const backendResponse: {
+    participantsPage: Page<GroupParticipant>;
+    currentUserOrganizer: boolean;
+    groupName: string;
+  } = await participantsResponse.json();
+
+  const rawParticipants = backendResponse.participantsPage?.content;
+
+  if (!backendResponse.participantsPage || !Array.isArray(rawParticipants)) {
+    console.error(
+      'Invalid participantsPage or participantsPage.content structure received from backend:',
+      backendResponse.participantsPage
+    );
+    const emptyPage: Page<GroupParticipant> = {
+      content: [],
+      totalPages: 0,
+      totalElements: 0,
+      size: size,
+      number: page,
+      first: true,
+      last: true,
+      empty: true,
+    };
+    return {
+      participantsPage: emptyPage,
+      isCurrentUserOrganizer: backendResponse.currentUserOrganizer ?? false,
+      groupName: backendResponse.groupName ?? 'Gruppe',
+    };
+  }
+
+  const convertedParticipants: GroupParticipant[] = rawParticipants.map(
+    (participant: GroupParticipant) => ({
+      id: participant.id,
+      username: participant.username,
+      firstName: participant.firstName,
+      lastName: participant.lastName,
+      avatarUrl: participant.avatarUrl,
+      isOrganizer: participant.isOrganizer,
+      gender: participant.gender,
+      participationStatus: participant.participationStatus as 'ACTIVE' | 'BLOCKED',
+    })
+  );
+
+  const convertedPage: Page<GroupParticipant> = {
+    ...backendResponse.participantsPage,
+    content: convertedParticipants,
   };
 
-  return Promise.resolve({
-    participantsPage,
-    isCurrentUserOrganizer: isCurrentUserActualOrganizer,
-    groupName,
-  });
+  return {
+    participantsPage: convertedPage,
+    isCurrentUserOrganizer: backendResponse.currentUserOrganizer,
+    groupName: backendResponse.groupName,
+  };
 };
 
 export const joinGroup = async (groupId: string): Promise<{ message: string }> => {
-  console.log(`[API STUB] Joining group ID: ${groupId}`);
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  mockGroupMembershipDB[groupId] = 'MEMBER';
-  console.log(`[API STUB] Group ${groupId} membership status in mock DB updated to MEMBER.`);
-  return Promise.resolve({ message: 'Erfolgreich der Gruppe beigetreten!' });
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.joinMeeting(groupId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message: errorData.message || `Error joining group: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+
+  return response.json();
 };
 
 export const leaveGroup = async (groupId: string): Promise<{ message: string }> => {
-  console.log(`[API STUB] Leaving group ID: ${groupId}`);
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  mockGroupMembershipDB[groupId] = 'NOT_MEMBER';
-  console.log(`[API STUB] Group ${groupId} membership status in mock DB updated to NOT_MEMBER.`);
-  return Promise.resolve({ message: 'Gruppe erfolgreich verlassen!' });
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.leaveMeeting(groupId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message: errorData.message || `Error leaving group: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+
+  return response.json();
 };
 
-export const blockGroupParticipant = async (
-  groupId: string,
+export const blockMeetingParticipantApi = async (
+  meetingId: string,
   userId: number
 ): Promise<GroupParticipantActionResponse> => {
-  console.log(`[API STUB] Blocking participant ID: ${userId} from group ID: ${groupId}`);
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  return Promise.resolve({
-    message: `Benutzer ${userId} erfolgreich für Gruppe ${groupId} gesperrt (simuliert).`,
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.blockMeetingParticipant(meetingId, userId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    credentials: 'include',
   });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message: errorData.message || `Fehler beim Sperren des Teilnehmers: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+  return response.json();
+};
+
+export const unblockMeetingParticipantApi = async (
+  meetingId: string,
+  userId: number
+): Promise<GroupParticipantActionResponse> => {
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.blockMeetingParticipant(meetingId, userId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: headers,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message:
+        errorData.message || `Fehler beim Entsperren des Teilnehmers: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+  return response.json();
 };
 
 export const removeGroupParticipant = async (
   groupId: string,
   userId: number
 ): Promise<GroupParticipantActionResponse> => {
-  console.log(`[API STUB] Removing participant ID: ${userId} from group ID: ${groupId}`);
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  return Promise.resolve({
-    message: `Benutzer ${userId} erfolgreich aus Gruppe ${groupId} entfernt (simuliert).`,
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.removeMeetingParticipant(groupId, userId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: headers,
+    credentials: 'include',
   });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message: errorData.message || `Error removing participant: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+
+  return response.json();
+};
+
+export const deleteMeetingApi = async (meetingId: string): Promise<void> => {
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.deleteMeeting(meetingId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: headers,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 204) {
+      return;
+    }
+    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error' }));
+    throw {
+      message: errorData.message || `Error deleting meeting: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+  if (response.status === 204) {
+    return;
+  }
 };

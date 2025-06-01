@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { removeGroupParticipant } from '../../api/groups';
+import { removeGroupParticipant as removeGroupParticipantApi } from '../../api/groups';
 import { GroupParticipantActionResponse } from '../../types/group';
 
-type RemoveParticipantError = Error;
+type RemoveParticipantError = Error & { statusCode?: number };
 interface RemoveParticipantVariables {
   groupId: string;
   userId: number;
@@ -22,9 +22,9 @@ export const useRemoveGroupParticipant = (
     RemoveParticipantError,
     RemoveParticipantVariables
   >({
-    mutationFn: ({ groupId, userId }) => removeGroupParticipant(groupId, userId),
+    mutationFn: ({ groupId, userId }) => removeGroupParticipantApi(groupId, userId),
     onSuccess: (data, variables) => {
-      toast.success(data.message);
+      toast.success(data.message || 'Teilnehmer erfolgreich entfernt.');
       queryClient.invalidateQueries({
         queryKey: ['groupParticipants', { groupId: variables.groupId }],
       });

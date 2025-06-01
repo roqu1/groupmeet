@@ -5,8 +5,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   MoreHorizontal,
-  UserX,
   ShieldAlert,
+  ShieldCheck,
+  UserX,
   Loader2,
   Mars,
   Venus,
@@ -16,27 +17,33 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 interface ParticipantListItemProps {
   participant: GroupParticipant;
   isCurrentUserOrganizer: boolean;
   currentUserId: number | null;
-  onBlockParticipant: (userId: number) => void;
-  onRemoveParticipant: (userId: number) => void;
-  isActionInProgress?: boolean;
-  actionTypeInProgress?: 'block' | 'remove' | null;
+  meetingId: string;
+  onBlockParticipant: (meetingId: string, userId: number) => void;
+  onUnblockParticipant: (meetingId: string, userId: number) => void;
+  onRemoveParticipant: (meetingId: string, userId: number) => void;
+  isCurrentParticipantActionLoading: boolean;
+  actionTypeInProgressForCurrentParticipant: 'block' | 'unblock' | 'remove' | null;
 }
 
 const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
   participant,
   isCurrentUserOrganizer,
   currentUserId,
+  meetingId,
   onBlockParticipant,
+  onUnblockParticipant,
   onRemoveParticipant,
-  isActionInProgress,
-  actionTypeInProgress,
+  isCurrentParticipantActionLoading,
+  actionTypeInProgressForCurrentParticipant,
 }) => {
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'N/A';
@@ -70,7 +77,7 @@ const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <Avatar className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0">
           <AvatarImage
-            src={participant.avatarUrl ?? undefined}
+            src={getFullAvatarUrl(participant.avatarUrl)}
             alt={`${participant.firstName} ${participant.lastName}`}
           />
           <AvatarFallback>
@@ -99,6 +106,11 @@ const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
               (Veranstalter)
             </span>
           )}
+          {participant.participationStatus === 'BLOCKED' && (
+            <span className="text-xs text-red-500 font-semibold block sm:inline sm:ml-2">
+              (Gesperrt)
+            </span>
+          )}
         </div>
       </div>
 
@@ -110,8 +122,13 @@ const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
         {showAdminActions && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isActionInProgress}>
-                {isActionInProgress ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={isCurrentParticipantActionLoading}
+              >
+                {isCurrentParticipantActionLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <MoreHorizontal className="h-4 w-4" />
@@ -120,29 +137,60 @@ const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => onRemoveParticipant(participant.id)}
-                disabled={isActionInProgress && actionTypeInProgress === 'remove'}
-                className="text-red-600 hover:!text-red-600 focus:!text-red-600 hover:!bg-red-50 focus:!bg-red-50"
-              >
-                {isActionInProgress && actionTypeInProgress === 'remove' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <UserX className="mr-2 h-4 w-4" />
-                )}
-                Aus Gruppe entfernen
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onBlockParticipant(participant.id)}
-                disabled={isActionInProgress && actionTypeInProgress === 'block'}
-              >
-                {isActionInProgress && actionTypeInProgress === 'block' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                )}
-                Benutzer sperren (TODO)
-              </DropdownMenuItem>
+              {participant.participationStatus === 'BLOCKED' ? (
+                <DropdownMenuItem
+                  onClick={() => onUnblockParticipant(meetingId, participant.id)}
+                  disabled={
+                    isCurrentParticipantActionLoading &&
+                    actionTypeInProgressForCurrentParticipant === 'unblock'
+                  }
+                  className="text-green-600 hover:!text-green-600 focus:!text-green-600 hover:!bg-green-50 focus:!bg-green-50"
+                >
+                  {isCurrentParticipantActionLoading &&
+                  actionTypeInProgressForCurrentParticipant === 'unblock' ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                  )}
+                  Sperrung aufheben
+                </DropdownMenuItem>
+              ) : (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => onBlockParticipant(meetingId, participant.id)}
+                    disabled={
+                      isCurrentParticipantActionLoading &&
+                      actionTypeInProgressForCurrentParticipant === 'block'
+                    }
+                    className="text-orange-600 hover:!text-orange-600 focus:!text-orange-600 hover:!bg-orange-50 focus:!bg-orange-50"
+                  >
+                    {isCurrentParticipantActionLoading &&
+                    actionTypeInProgressForCurrentParticipant === 'block' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                    )}
+                    Benutzer sperren
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onRemoveParticipant(meetingId, participant.id)}
+                    disabled={
+                      isCurrentParticipantActionLoading &&
+                      actionTypeInProgressForCurrentParticipant === 'remove'
+                    }
+                    className="text-red-600 hover:!text-red-600 focus:!text-red-600 hover:!bg-red-50 focus:!bg-red-50"
+                  >
+                    {isCurrentParticipantActionLoading &&
+                    actionTypeInProgressForCurrentParticipant === 'remove' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <UserX className="mr-2 h-4 w-4" />
+                    )}
+                    Teilnehmer entfernen
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

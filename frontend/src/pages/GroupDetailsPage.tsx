@@ -1,69 +1,129 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useGroupDetails } from '@/hooks/groups/useGroupDetails';
 import { useJoinGroup } from '@/hooks/groups/useJoinGroup';
 import { useLeaveGroup } from '@/hooks/groups/useLeaveGroup';
-import { Loader2, AlertCircle, Plus } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  Plus,
+  Users,
+  MapPin,
+  CalendarDays,
+  ArrowLeft,
+  Globe,
+  Trash2,
+} from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
-import { GroupParticipant as GroupParticipantType } from '@/types/group';
+import { MeetingParticipantPreview } from '@/types/group';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useDeleteMeeting } from '@/hooks/groups/useDeleteMeeting';
+import { LOCATION_OPTIONS } from '@/config/options';
+import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
 
   const { data: group, isLoading, isFetching, isError, error } = useGroupDetails(groupId);
+  const { mutate: deleteMeetingMutate, isPending: isDeletingGroupHook } = useDeleteMeeting();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { mutate: joinGroupMutate, isPending: isJoiningGroup } = useJoinGroup();
   const { mutate: leaveGroupMutate, isPending: isLeavingGroup } = useLeaveGroup();
 
   const organizer = useMemo(() => group?.organizer, [group]);
-  const allParticipantsPreview = useMemo(() => group?.participantsPreview ?? [], [group]);
-  const tags = useMemo(() => group?.tags ?? [], [group]);
+  const participantsPreview = useMemo(() => group?.participantsPreview ?? [], [group]);
+  const totalParticipants = useMemo(() => group?.totalParticipants ?? 0, [group]);
+  const meetingTypeNames = useMemo(() => group?.meetingTypeNames ?? [], [group]);
 
   const handleJoinGroup = () => {
     if (!groupId || isJoiningGroup || isFetching) return;
-    console.log(`[UI] Attempting to join group ID: ${groupId}`);
     joinGroupMutate(groupId);
   };
 
   const handleLeaveGroup = () => {
     if (!groupId || isLeavingGroup || isFetching) return;
-    console.log(`[UI] Attempting to leave group ID: ${groupId}`);
-    leaveGroupMutate(groupId);
+    leaveGroupMutate(groupId, {
+      onSuccess: () => {},
+    });
   };
 
-  const MAX_DISPLAY_SLOTS_IN_PREVIEW = 6;
-  const showJoinButton = group?.currentUserMembership === 'NOT_MEMBER';
+  const handleDeleteConfirmed = () => {
+    if (!groupId || isDeletingGroupHook || isFetching) return;
+    deleteMeetingMutate(groupId, {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+      },
+      onError: () => {
+        setIsDeleteDialogOpen(false);
+      },
+    });
+  };
+
+  const MAX_DISPLAY_SLOTS_IN_PREVIEW = 5;
+
+  const isCurrentUserMember = group?.currentUserMembership === 'MEMBER';
+  const isCurrentUserOrganizer = group?.currentUserOrganizer === true;
+
+  const showJoinButton =
+    group?.currentUserMembership === 'NOT_MEMBER' &&
+    (!group.maxParticipants || group.totalParticipants < group.maxParticipants);
+
+  const showLeaveButton = isCurrentUserMember && !isCurrentUserOrganizer;
+  const showDeleteButton = isCurrentUserOrganizer;
 
   const numberOfParticipantsToDisplay = showJoinButton
     ? MAX_DISPLAY_SLOTS_IN_PREVIEW - 1
     : MAX_DISPLAY_SLOTS_IN_PREVIEW;
 
   const displayedParticipants = useMemo(() => {
-    return allParticipantsPreview.slice(0, numberOfParticipantsToDisplay);
-  }, [allParticipantsPreview, numberOfParticipantsToDisplay]);
+    return participantsPreview.slice(0, numberOfParticipantsToDisplay);
+  }, [participantsPreview, numberOfParticipantsToDisplay]);
 
   const getInitials = (firstName?: string, lastName?: string) =>
     `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'N/A';
 
-  if (isLoading) {
+  const getLocationLabel = (locationValue: string | undefined): string => {
+    if (!locationValue) return '';
+    const locationOption = LOCATION_OPTIONS.find((option) => option.value === locationValue);
+    return locationOption ? locationOption.label : locationValue;
+  };
+
+  if (isLoading && !group) {
     return (
       <div className="container-wrapper py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
-  if (isError) {
+  if (isError && !group) {
     return (
       <div className="container-wrapper py-8">
         <div className="p-6 border border-destructive/50 bg-destructive/10 text-destructive rounded-lg flex flex-col items-center gap-4 text-center">
           <AlertCircle className="h-8 w-8" />
-          <p className="font-medium">Fehler beim Laden der Gruppendetails</p>
-          <p className="text-sm">
-            {error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten.'}
-          </p>
+          <p className="font-medium">Fehler beim Laden der Meeting-Details</p>
+          <p className="text-sm">{error?.message || 'Ein unbekannter Fehler ist aufgetreten.'}</p>
+          <Button asChild variant="outline" size="sm" className="mt-4">
+            <Link to={`/`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Zur Homepage
+            </Link>
+          </Button>
         </div>
       </div>
     );
@@ -71,39 +131,103 @@ const GroupDetailsPage = () => {
   if (!group) {
     return (
       <div className="container-wrapper py-8 text-center text-muted-foreground min-h-[calc(100vh-10rem)] flex items-center justify-center">
-        Gruppendaten nicht verfügbar oder Gruppe nicht gefunden.
+        Meeting-Daten nicht verfügbar oder Meeting nicht gefunden.
       </div>
     );
   }
 
   return (
     <div className="container-wrapper py-8">
-      <h1 className="text-3xl font-bold text-foreground mb-6 lg:mb-8">{group.name}</h1>
+      <h1 className="text-3xl font-bold text-foreground mb-6 lg:mb-8">{group.title}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
         <div className="md:col-span-2 space-y-6">
           <div className="p-4 sm:p-6 border rounded-lg bg-card shadow-sm">
             <div className="flex justify-between items-start mb-3">
-              <div />
-              {group.currentUserMembership === 'MEMBER' && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleLeaveGroup}
-                  disabled={isLeavingGroup || isFetching}
-                >
-                  {isLeavingGroup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Gruppe verlassen
-                </Button>
-              )}
+              <div>
+                {group.maxParticipants && (
+                  <Badge variant="outline" className="text-sm">
+                    <Users className="mr-1.5 h-3.5 w-3.5" />
+                    {group.participantCount} / {group.maxParticipants}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {showLeaveButton && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleLeaveGroup}
+                    disabled={isLeavingGroup || isFetching}
+                  >
+                    {isLeavingGroup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Meeting verlassen
+                  </Button>
+                )}
+                {isCurrentUserOrganizer && (
+                  <>
+                    {/* <Button variant="outline" size="sm" disabled={isFetching  || isEditing }> */}
+                    {/* Meeting bearbeiten (TODO)
+                    </Button> */}
+                    {showDeleteButton && (
+                      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isDeletingGroupHook || isFetching}
+                            className="ml-2"
+                            onClick={() => setIsDeleteDialogOpen(true)}
+                          >
+                            {isDeletingGroupHook ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="mr-2 h-4 w-4" />
+                            )}
+                            Meeting löschen
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Möchten Sie das Meeting "{group.title}" wirklich löschen? Diese Aktion
+                              kann nicht rückgängig gemacht werden. Alle Teilnehmerdaten für dieses
+                              Meeting gehen verloren.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel
+                              onClick={() => setIsDeleteDialogOpen(false)}
+                              disabled={isDeletingGroupHook}
+                            >
+                              Abbrechen
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDeleteConfirmed}
+                              disabled={isDeletingGroupHook}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {isDeletingGroupHook ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : null}
+                              Löschen
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             <p className="text-muted-foreground whitespace-pre-wrap">{group.description}</p>
           </div>
 
           <div className="p-4 sm:p-6 border rounded-lg bg-card shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Teilnehmer ({group.totalParticipants})</h2>
-              {group.totalParticipants > displayedParticipants.length && (
+              <h2 className="text-xl font-semibold">Teilnehmer ({totalParticipants})</h2>
+              {totalParticipants > displayedParticipants.length && (
                 <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
                   <Link to={`/groups/${groupId}/participants`}>Alles ansehen</Link>
                 </Button>
@@ -131,20 +255,49 @@ const GroupDetailsPage = () => {
                   </span>
                 </Button>
               )}
-              {displayedParticipants.map((participant: GroupParticipantType) => (
+              {organizer && (
+                <Link
+                  to={`/profile/${organizer.id}`}
+                  key={`organizer-${organizer.id}`}
+                  className={cn(
+                    'flex flex-col items-center p-3 rounded-lg border bg-background hover:shadow-lg transition-all duration-200 ease-in-out w-24 sm:w-28 text-center no-underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                    'min-h-[150px] sm:min-h-[160px]',
+                    'border-2 border-primary shadow-xl'
+                  )}
+                  title={`Profil von ${organizer.firstName} ${organizer.lastName} ansehen (Veranstalter)`}
+                >
+                  <Avatar className="h-12 w-12 sm:h-14 sm:w-14 mb-2">
+                    <AvatarImage
+                      src={getFullAvatarUrl(organizer.avatarUrl)}
+                      alt={`${organizer.firstName} ${organizer.lastName}`}
+                    />
+                    <AvatarFallback className="text-lg">
+                      {getInitials(organizer.firstName, organizer.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col justify-end flex-grow w-full">
+                    <div className="h-[2.5em] flex items-center justify-center mb-0.5">
+                      <span className="text-sm font-medium text-card-foreground leading-tight line-clamp-2">
+                        {organizer.firstName} {organizer.lastName}
+                      </span>
+                    </div>
+                    <span className="text-xs text-primary font-semibold">Veranstalter</span>
+                  </div>
+                </Link>
+              )}
+              {displayedParticipants.map((participant: MeetingParticipantPreview) => (
                 <Link
                   to={`/profile/${participant.id}`}
                   key={participant.id}
                   className={cn(
                     'flex flex-col items-center p-3 rounded-lg border bg-background hover:shadow-lg transition-all duration-200 ease-in-out w-24 sm:w-28 text-center no-underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                    'min-h-[150px] sm:min-h-[160px]',
-                    participant.isOrganizer && 'border-2 border-primary shadow-xl'
+                    'min-h-[150px] sm:min-h-[160px]'
                   )}
                   title={`Profil von ${participant.firstName} ${participant.lastName} ansehen`}
                 >
                   <Avatar className="h-12 w-12 sm:h-14 sm:w-14 mb-2">
                     <AvatarImage
-                      src={participant.avatarUrl ?? undefined}
+                      src={getFullAvatarUrl(participant.avatarUrl)}
                       alt={`${participant.firstName} ${participant.lastName}`}
                     />
                     <AvatarFallback className="text-lg">
@@ -157,11 +310,7 @@ const GroupDetailsPage = () => {
                         {participant.firstName} {participant.lastName}
                       </span>
                     </div>
-                    {participant.isOrganizer ? (
-                      <span className="text-xs text-primary font-semibold">Veranstalter</span>
-                    ) : (
-                      <span className="text-xs h-[1em]"></span>
-                    )}
+                    <span className="text-xs h-[1em]"></span>
                   </div>
                 </Link>
               ))}
@@ -171,43 +320,42 @@ const GroupDetailsPage = () => {
 
         <div className="md:col-span-1">
           <div className="sticky top-[calc(theme(space.14)+1rem)] p-4 sm:p-6 border rounded-lg bg-card shadow-sm space-y-4">
-            <h2 className="text-xl font-semibold border-b pb-3 mb-4">Detail</h2>
+            <h2 className="text-xl font-semibold border-b pb-3 mb-4">Details</h2>
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Gruppenname
+                Meeting-Titel
               </p>
-              <p className="text-lg font-medium">{group.name}</p>
+              <p className="text-lg font-medium">{group.title}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Zeit
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center">
+                <CalendarDays className="h-3.5 w-3.5 mr-1" /> Zeit
               </p>
               <p>
-                {new Date(group.dateTime).toLocaleDateString('de-DE', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {format(new Date(group.dateTime), 'EEEE, dd. MMMM yyyy', { locale: de })}
                 <br />
-                {new Date(group.dateTime).toLocaleTimeString('de-DE', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                Uhr
+                {format(new Date(group.dateTime), "HH:mm 'Uhr'", { locale: de })}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Ort
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center">
+                {group.format === 'ONLINE' ? (
+                  <Globe className="h-3.5 w-3.5 mr-1" />
+                ) : (
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                )}{' '}
+                Format & Ort
               </p>
-              <p className="font-medium">{group.location}</p>
-              <p className="text-sm text-muted-foreground">{group.address}</p>
+              <p className="font-medium">
+                {group.format === 'ONLINE'
+                  ? 'Online'
+                  : getLocationLabel(group.location || 'Nicht spezifiziert')}
+              </p>
             </div>
             {organizer && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Veranstalter
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center">
+                  <Users className="h-3.5 w-3.5 mr-1" /> Veranstalter
                 </p>
                 <Link
                   to={`/profile/${organizer.id}`}
@@ -216,7 +364,7 @@ const GroupDetailsPage = () => {
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={organizer.avatarUrl ?? undefined}
+                      src={getFullAvatarUrl(organizer.avatarUrl)}
                       alt={`${organizer.firstName} ${organizer.lastName}`}
                     />
                     <AvatarFallback>
@@ -229,13 +377,13 @@ const GroupDetailsPage = () => {
                 </Link>
               </div>
             )}
-            {tags.length > 0 && (
+            {meetingTypeNames.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-                  Tags
+                  Interessen
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
+                  {meetingTypeNames.map((tag) => (
                     <Badge key={tag} variant="secondary">
                       {tag}
                     </Badge>
