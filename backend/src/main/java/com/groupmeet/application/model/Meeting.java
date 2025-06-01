@@ -33,9 +33,13 @@ public class Meeting {
     private MeetingFormat format;
 
     @NotNull(message = "Meeting-Art ist erforderlich")
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "meeting_type_id", nullable = false)
-    private Interest meetingType;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "meeting_meeting_types",
+            joinColumns = @JoinColumn(name = "meeting_id"),
+            inverseJoinColumns = @JoinColumn(name = "interest_id")
+    )
+    private Set<Interest> meetingTypes = new HashSet<>();
 
     @Column(length = 255)
     private String location;
@@ -105,12 +109,12 @@ public class Meeting {
         this.format = format;
     }
 
-    public Interest getMeetingType() {
-        return meetingType;
+    public Set<Interest> getMeetingTypes() {
+        return meetingTypes;
     }
 
-    public void setMeetingType(Interest meetingType) {
-        this.meetingType = meetingType;
+    public void setMeetingTypes(Set<Interest> meetingTypes) {
+        this.meetingTypes = meetingTypes;
     }
 
     public String getLocation() {

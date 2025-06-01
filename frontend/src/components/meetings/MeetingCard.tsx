@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MeetingCardData } from '@/types/meeting';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { Users, MapPin, Globe, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { LOCATION_OPTIONS } from '@/config/options';
+import { MeetingCardData } from '@/api/meetings';
 
 interface MeetingCardProps {
   meeting: MeetingCardData;
@@ -27,8 +27,23 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting }) => {
     <div className="flex flex-col justify-between rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow h-full">
       <div className="p-4 sm:p-6 flex flex-col flex-grow">
         <div className="mb-3">
-          <div className="flex flex-wrap gap-2 mb-2">
-            <Badge variant="secondary">{meeting.meetingTypeName}</Badge>
+          <div className="flex flex-wrap gap-2 mb-2 items-center">
+            {meeting.meetingTypeNames && meeting.meetingTypeNames.length > 0 ? (
+              meeting.meetingTypeNames.slice(0, 3).map((typeName: string, index: number) => (
+                <Badge key={index} variant="secondary" className="truncate">
+                  {typeName}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="secondary" className="truncate">
+                Allgemein
+              </Badge>
+            )}
+            {meeting.meetingTypeNames && meeting.meetingTypeNames.length > 3 && (
+              <Badge variant="outline" className="text-xs">
+                +{meeting.meetingTypeNames.length - 3} mehr
+              </Badge>
+            )}
             <Badge
               variant={meeting.format === 'ONLINE' ? 'outline' : 'default'}
               className={
@@ -45,7 +60,7 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting }) => {
               {meeting.format === 'ONLINE' ? 'Online' : 'Vor Ort'}
             </Badge>
             {meeting.format === 'OFFLINE' && meeting.location && (
-              <Badge variant="outline" className="truncate max-w-xs">
+              <Badge variant="outline" className="truncate max-w-[100px] sm:max-w-[150px]">
                 <MapPin className="mr-1.5 h-3 w-3 text-muted-foreground" />
                 {getLocationLabel(meeting.location)}
               </Badge>
@@ -55,7 +70,6 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting }) => {
             <Link
               to={`/groups/${meeting.id}`}
               className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
-              onClick={(e) => e.preventDefault()}
             >
               {meeting.title}
             </Link>
@@ -77,12 +91,7 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting }) => {
               {meeting.maxParticipants ? `/${meeting.maxParticipants}` : ' Teilnehmer'}
             </span>
           </div>
-          <Button
-            size="sm"
-            className="px-3 py-1.5 h-auto"
-            asChild
-            onClick={(e) => e.preventDefault()}
-          >
+          <Button size="sm" className="px-3 py-1.5 h-auto" asChild>
             <Link to={`/groups/${meeting.id}`}>Anschauen</Link>
           </Button>
         </div>

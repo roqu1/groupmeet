@@ -1,11 +1,44 @@
-import {
-  MeetingsSearchPage,
-  MeetingsSearchParams,
-  MeetingCardData,
-  MeetingCreationPayload,
-} from '../types/meeting';
+import { Page } from '@/types/pagination';
 import { API_CONFIG } from '../config/api';
 import { getCookie } from '@/utils/cookies';
+
+export type MeetingFormat = 'ONLINE' | 'OFFLINE';
+
+export interface MeetingCardData {
+  id: number;
+  title: string;
+  description: string | null;
+  format: MeetingFormat;
+  meetingTypeNames: string[];
+  location?: string | null;
+  dateTime: string;
+  participantCount: number;
+  maxParticipants?: number | null;
+  creatorUsername: string;
+}
+
+export interface MeetingCreationPayload {
+  title: string;
+  description?: string;
+  format: MeetingFormat;
+  meetingTypeNames: string[];
+  location?: string;
+  dateTime: string;
+  maxParticipants?: number;
+}
+
+export interface MeetingsSearchParams {
+  page?: number;
+  size?: number;
+  searchTerm?: string;
+  types?: string[];
+  location?: string;
+  format?: MeetingFormat | '';
+  startDate?: string;
+  endDate?: string;
+}
+
+export type MeetingsSearchPage = Page<MeetingCardData>;
 
 export const fetchMeetings = async (
   params: MeetingsSearchParams = {}
@@ -23,6 +56,8 @@ export const fetchMeetings = async (
   if (params.startDate) queryParams.append('startDate', params.startDate);
   if (params.endDate) queryParams.append('endDate', params.endDate);
 
+  queryParams.append('sort', 'dateTime,asc');
+
   const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.searchMeetings}?${queryParams.toString()}`;
 
   const response = await fetch(url, {
@@ -37,7 +72,7 @@ export const fetchMeetings = async (
   if (!response.ok) {
     const errorData = await response
       .json()
-      .catch(() => ({ message: 'Failed to parse error response from meeting search' }));
+      .catch(() => ({ message: 'Failed to parse error response from meetings search' }));
     throw {
       message: errorData.message || `Error searching meetings: ${response.statusText}`,
       statusCode: response.status,
@@ -56,8 +91,6 @@ export const createMeeting = async (payload: MeetingCreationPayload): Promise<Me
   };
   if (csrfToken) {
     headers['X-XSRF-TOKEN'] = csrfToken;
-  } else {
-    console.warn('CSRF token not found for createMeeting');
   }
 
   const response = await fetch(url, {
@@ -71,10 +104,18 @@ export const createMeeting = async (payload: MeetingCreationPayload): Promise<Me
     const errorData = await response
       .json()
       .catch(() => ({ message: 'Failed to parse error response from create meeting' }));
+
+    if (response.status === 400 && errorData.errors) {
+      throw {
+        message: errorData.message || 'Validation failed',
+        statusCode: response.status,
+        validationErrors: errorData.errors,
+      };
+    }
+
     throw {
       message: errorData.message || `Error creating meeting: ${response.statusText}`,
       statusCode: response.status,
-      validationErrors: errorData.errors,
     };
   }
   const data: MeetingCardData = await response.json();

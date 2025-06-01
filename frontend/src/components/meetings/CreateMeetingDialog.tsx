@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Combobox, ComboboxOption } from '@/components/ui/comboBox';
+import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import {
   Select,
   SelectContent,
@@ -26,9 +26,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PlusCircle, Loader2, AlertCircle } from 'lucide-react';
 import { LOCATION_OPTIONS, MEETING_FORMAT_CREATION_OPTIONS } from '@/config/options';
-import { MeetingCreationPayload, MeetingFormat } from '@/types/meeting';
+import { MeetingFormat, MeetingCreationPayload } from '@/types/meeting';
 import { useCreateMeeting } from '@/hooks/meetings/useCreateMeeting';
 import { useInterestOptions } from '@/hooks/options/useInterestOptions';
+import { Combobox, ComboboxOption } from '@/components/ui/comboBox';
 
 const createMeetingSchema = z
   .object({
@@ -37,7 +38,10 @@ const createMeetingSchema = z
     format: z.enum(['ONLINE', 'OFFLINE'], {
       required_error: 'Format ist erforderlich',
     }) as z.ZodType<MeetingFormat>,
-    meetingTypeName: z.string().min(1, 'Art ist erforderlich'),
+    meetingTypeNames: z
+      .array(z.string().min(1, 'Art-Name darf nicht leer sein.'))
+      .min(1, 'Mindestens eine Art ist erforderlich')
+      .max(5, 'Maximal 5 Arten erlaubt'),
     location: z.string().optional(),
     dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), {
       message: 'Ungültiges Datum/Uhrzeit',
@@ -47,7 +51,8 @@ const createMeetingSchema = z
       .int()
       .positive('Muss positiv sein')
       .min(2, 'Mindestens 2 Teilnehmer')
-      .max(100, 'Maximal 100 Teilnehmer'),
+      .max(100, 'Maximal 100 Teilnehmer')
+      .optional(),
   })
   .refine(
     (data) => {
@@ -93,7 +98,7 @@ const CreateMeetingDialog: React.FC = () => {
   } = useCreateMeeting();
 
   const { data: interestOptionsData, isLoading: isLoadingInterests } = useInterestOptions();
-  const artOptions: ComboboxOption[] =
+  const artOptions: MultiSelectOption[] =
     interestOptionsData?.map((opt) => ({ value: opt.value, label: opt.label })) || [];
 
   const {
@@ -101,6 +106,7 @@ const CreateMeetingDialog: React.FC = () => {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isValid },
   } = useForm<CreateMeetingFormData>({
     resolver: zodResolver(createMeetingSchema),
@@ -109,7 +115,7 @@ const CreateMeetingDialog: React.FC = () => {
       title: '',
       description: '',
       format: 'OFFLINE',
-      meetingTypeName: '',
+      meetingTypeNames: [],
       location: '',
       dateTime: getDefaultDateTime(),
       maxParticipants: undefined,
@@ -136,7 +142,15 @@ const CreateMeetingDialog: React.FC = () => {
     if (!open && !isSubmitting) {
       reset();
     } else if (open) {
-      reset();
+      reset({
+        title: '',
+        description: '',
+        format: 'OFFLINE',
+        meetingTypeNames: [],
+        location: '',
+        dateTime: getDefaultDateTime(),
+        maxParticipants: undefined,
+      });
     }
     setIsOpen(open);
   };
@@ -155,7 +169,7 @@ const CreateMeetingDialog: React.FC = () => {
             Füllen Sie die Details für Ihr neues Meeting aus. Klicken Sie auf "Erstellen", wenn Sie
             fertig sind.
           </DialogDescription>
-        </DialogHeader>{' '}
+        </DialogHeader>
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 scroll-container"
@@ -164,6 +178,13 @@ const CreateMeetingDialog: React.FC = () => {
             <div className="col-span-4 mb-4 p-3 border border-destructive/50 bg-destructive/10 text-destructive rounded flex items-center gap-2 text-sm">
               <AlertCircle className="h-4 w-4" />
               {submissionError.message || 'Fehler beim Erstellen des Meetings.'}
+              {submissionError.validationErrors && (
+                <ul className="list-disc list-inside text-xs mt-1">
+                  {Object.entries(submissionError.validationErrors).map(([field, message]) => (
+                    <li key={field}>{`${message}`}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
@@ -203,13 +224,12 @@ const CreateMeetingDialog: React.FC = () => {
             </Label>
             <Select
               value={selectedFormat}
-              onValueChange={(value) =>
-                reset({
-                  ...watch(),
-                  format: value as MeetingFormat,
-                  location: value === 'ONLINE' ? '' : watch('location'),
-                })
-              }
+              onValueChange={(value) => {
+                setValue('format', value as MeetingFormat, { shouldValidate: true });
+                if (value === 'ONLINE') {
+                  setValue('location', '', { shouldValidate: true });
+                }
+              }}
             >
               <SelectTrigger id="format" className="col-span-3">
                 <SelectValue placeholder="Format wählen..." />
@@ -230,21 +250,23 @@ const CreateMeetingDialog: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-            <Label htmlFor="meetingTypeName" className="text-right col-span-1">
+            <Label htmlFor="meetingTypeNames" className="text-right col-span-1">
               Art*
             </Label>
-            <Combobox
-              id="meetingTypeName"
+            <MultiSelect
+              id="meetingTypeNames"
               options={artOptions}
-              value={watch('meetingTypeName')}
-              onSelect={(value) => reset({ ...watch(), meetingTypeName: value })}
-              placeholder={isLoadingInterests ? 'Laden...' : 'Art wählen...'}
+              selected={watch('meetingTypeNames') || []}
+              onValueChange={(newSelectedValues) => {
+                setValue('meetingTypeNames', newSelectedValues, { shouldValidate: true });
+              }}
+              placeholder={isLoadingInterests ? 'Laden...' : 'Arten wählen...'}
               disabled={isLoadingInterests}
               className="col-span-3"
             />
-            {errors.meetingTypeName && (
+            {errors.meetingTypeNames && (
               <p className="col-start-2 col-span-3 text-destructive text-xs">
-                {errors.meetingTypeName.message}
+                {errors.meetingTypeNames.message}
               </p>
             )}
           </div>
@@ -256,9 +278,9 @@ const CreateMeetingDialog: React.FC = () => {
               </Label>
               <Combobox
                 id="location"
-                options={LOCATION_OPTIONS}
+                options={LOCATION_OPTIONS as ComboboxOption[]}
                 value={watch('location') || ''}
-                onSelect={(value) => reset({ ...watch(), location: value })}
+                onSelect={(value) => setValue('location', value, { shouldValidate: true })}
                 placeholder="Ort wählen..."
                 className="col-span-3"
               />
@@ -289,12 +311,12 @@ const CreateMeetingDialog: React.FC = () => {
 
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
             <Label htmlFor="maxParticipants" className="text-right col-span-1">
-              Max. Teilnehmer*
+              Max. Teilnehmer
             </Label>
             <Input
               id="maxParticipants"
               type="number"
-              min="1"
+              min="2"
               {...register('maxParticipants')}
               className="col-span-3"
               placeholder="z.B. 25"

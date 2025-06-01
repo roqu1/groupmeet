@@ -22,5 +22,16 @@ export const API_CONFIG = {
     createMeeting: '/api/meetings',
     searchMeetings: '/api/meetings/search',
     interests: '/api/interests',
+    locations: '/api/locations',
+    joinMeeting: (meetingId: string): string => `/api/meetings/${meetingId}/join`,
+    leaveMeeting: (meetingId: string): string => `/api/meetings/${meetingId}/leave`,
+    meetingDetails: (meetingId: string): string => `/api/meetings/${meetingId}`,
+    meetingParticipants: (meetingId: string): string =>
+      `/api/meetings/${meetingId}/participants-details`,
+    blockMeetingParticipant: (meetingId: string, userId: number): string =>
+      `/api/meetings/${meetingId}/participants/${userId}/block`,
+    removeMeetingParticipant: (meetingId: string, userId: number): string =>
+      `/api/meetings/${meetingId}/participants/${userId}/remove`,
+    deleteMeeting: (meetingId: string): string => `/api/meetings/${meetingId}`,
   },
 } as const;

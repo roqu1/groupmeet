@@ -1,5 +1,6 @@
 import { API_CONFIG } from '../config/api';
 import { UserSearchPage, SearchUsersParams } from '../types/user';
+import { UserProfileMeetingsPage } from '../types/meeting';
 
 export const searchUsers = async (params: SearchUsersParams = {}): Promise<UserSearchPage> => {
   const queryParams = new URLSearchParams();
@@ -39,5 +40,46 @@ export const searchUsers = async (params: SearchUsersParams = {}): Promise<UserS
     };
   }
   const data: UserSearchPage = await response.json();
+  return data;
+};
+
+interface FetchUserMeetingsParams {
+  userId: string;
+  page: number;
+  size: number;
+}
+
+export const fetchUserMeetings = async ({
+  userId,
+  page,
+  size,
+}: FetchUserMeetingsParams): Promise<UserProfileMeetingsPage> => {
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'dateTime,asc',
+  });
+
+  const url = `${API_CONFIG.baseUrl}/api/users/${userId}/meetings?${queryParams.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: 'Failed to parse error response from fetching user meetings' }));
+    throw {
+      message: errorData.message || `Error fetching user meetings: ${response.statusText}`,
+      statusCode: response.status,
+    };
+  }
+  const data: UserProfileMeetingsPage = await response.json();
   return data;
 };

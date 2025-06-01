@@ -21,7 +21,7 @@ export type MultiSelectOption = {
 interface MultiSelectProps {
   options: MultiSelectOption[];
   selected: string[];
-  onValueChange: React.Dispatch<React.SetStateAction<string[]>>;
+  onValueChange: (newSelectedValues: string[]) => void;
   className?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -35,14 +35,15 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
   ) => {
     const [open, setOpen] = React.useState(false);
 
-    const handleSelect = (value: string) => {
-      onValueChange((prev) =>
-        prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-      );
+    const handleSelect = (valueToToggle: string) => {
+      const newSelected = selected.includes(valueToToggle)
+        ? selected.filter((v) => v !== valueToToggle)
+        : [...selected, valueToToggle];
+      onValueChange(newSelected);
     };
 
-    const handleRemove = (value: string) => {
-      onValueChange((prev) => prev.filter((v) => v !== value));
+    const handleRemove = (valueToRemove: string) => {
+      onValueChange(selected.filter((v) => v !== valueToRemove));
     };
 
     const selectedLabels = selected
@@ -96,13 +97,8 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
                   <CommandItem
                     key={option.value}
                     value={option.label}
-                    onSelect={(currentLabel: string) => {
-                      const selectedOption = options.find(
-                        (opt) => opt.label.toLowerCase() === currentLabel.toLowerCase()
-                      );
-                      const newValue = selectedOption ? selectedOption.value : '';
-                      handleSelect(newValue);
-                      setOpen(false);
+                    onSelect={() => {
+                      handleSelect(option.value);
                     }}
                     aria-selected={selected.includes(option.value)}
                   >

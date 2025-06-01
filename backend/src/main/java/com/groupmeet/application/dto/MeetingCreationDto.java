@@ -4,10 +4,12 @@ import com.groupmeet.application.model.MeetingFormat;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class MeetingCreationDto {
 
@@ -20,8 +22,9 @@ public class MeetingCreationDto {
     @NotNull(message = "Format ist erforderlich")
     private MeetingFormat format;
 
-    @NotBlank(message = "Art des Meetings ist erforderlich")
-    private String meetingTypeName;
+    @NotEmpty(message = "Mindestens eine Art des Meetings ist erforderlich")
+    @Size(min = 1, max = 5, message = "Es können zwischen 1 und 5 Arten ausgewählt werden")
+    private List<String> meetingTypeNames;
 
     @Size(max = 255, message = "Ort darf maximal 255 Zeichen lang sein")
     private String location;
@@ -57,12 +60,12 @@ public class MeetingCreationDto {
         this.format = format;
     }
 
-    public String getMeetingTypeName() {
-        return meetingTypeName;
+    public List<String> getMeetingTypeNames() {
+        return meetingTypeNames;
     }
 
-    public void setMeetingTypeName(String meetingTypeName) {
-        this.meetingTypeName = meetingTypeName;
+    public void setMeetingTypeNames(List<String> meetingTypeNames) {
+        this.meetingTypeNames = meetingTypeNames;
     }
 
     public String getLocation() {
