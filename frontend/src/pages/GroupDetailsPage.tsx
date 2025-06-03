@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useGroupDetails } from '@/hooks/groups/useGroupDetails';
 import { useJoinGroup } from '@/hooks/groups/useJoinGroup';
 import { useLeaveGroup } from '@/hooks/groups/useLeaveGroup';
@@ -33,15 +33,21 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useDeleteMeeting } from '@/hooks/groups/useDeleteMeeting';
-import { LOCATION_OPTIONS } from '@/config/options';
+import { LOCATION_OPTIONS, MEETING_FORMAT_CREATION_OPTIONS } from '@/config/options';
 import { getFullAvatarUrl } from '@/utils/imageUrl';
+import EditGroupDialog from '@/components/groups/EditGroupDialog';
+import { useInterestOptions } from '@/hooks/options/useInterestOptions';
+import { toast } from 'react-toastify';
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
 
-  const { data: group, isLoading, isFetching, isError, error } = useGroupDetails(groupId);
+  const { data: group, isLoading, isFetching, isError, error, refetch } = useGroupDetails(groupId);
   const { mutate: deleteMeetingMutate, isPending: isDeletingGroupHook } = useDeleteMeeting();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const { data: interestOptions = [] } = useInterestOptions();
 
   const { mutate: joinGroupMutate, isPending: isJoiningGroup } = useJoinGroup();
   const { mutate: leaveGroupMutate, isPending: isLeavingGroup } = useLeaveGroup();
@@ -62,17 +68,25 @@ const GroupDetailsPage = () => {
       onSuccess: () => {},
     });
   };
-
   const handleDeleteConfirmed = () => {
     if (!groupId || isDeletingGroupHook || isFetching) return;
     deleteMeetingMutate(groupId, {
       onSuccess: () => {
         setIsDeleteDialogOpen(false);
+        toast.success('Meeting wurde erfolgreich gelöscht');
+        setTimeout(() => {
+          navigate('/');
+        }, 500);
       },
-      onError: () => {
+      onError: (error) => {
         setIsDeleteDialogOpen(false);
+        toast.error(`Fehler beim Löschen des Meetings: ${error.message || 'Unbekannter Fehler'}`);
       },
     });
+  };
+
+  const handleGroupUpdated = () => {
+    refetch();
   };
 
   const MAX_DISPLAY_SLOTS_IN_PREVIEW = 5;
@@ -166,9 +180,13 @@ const GroupDetailsPage = () => {
                 )}
                 {isCurrentUserOrganizer && (
                   <>
-                    {/* <Button variant="outline" size="sm" disabled={isFetching  || isEditing }> */}
-                    {/* Meeting bearbeiten (TODO)
-                    </Button> */}
+                    {' '}
+                    <EditGroupDialog
+                      group={group}
+                      formatOptions={MEETING_FORMAT_CREATION_OPTIONS}
+                      artOptions={interestOptions}
+                      onGroupUpdated={handleGroupUpdated}
+                    />
                     {showDeleteButton && (
                       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                         <AlertDialogTrigger asChild>
