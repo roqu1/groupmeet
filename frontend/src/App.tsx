@@ -28,9 +28,10 @@ function App() {
           <Route element={<PublicOnlyRoute />}>
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
+          {/* Always Public Routes */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected Routes (redirect if not logged in) */}
           <Route element={<ProtectedRoute />}>
