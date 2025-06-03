@@ -16,6 +16,7 @@ export const useRemoveFriend = (
     onSuccess: () => {
       toast.success('Freund erfolgreich entfernt!');
       queryClient.invalidateQueries({ queryKey: ['friends'] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },
 
     onError: (error: RemoveFriendError) => {

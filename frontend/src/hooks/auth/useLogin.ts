@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useHttp, ApiError } from '../useHttp';
 import { API_CONFIG } from '../../config/api';
 import { AuthUser, useAuth } from '@/lib/auth/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Matches backend LoginRequestDto
 interface LoginRequest {
@@ -22,6 +23,7 @@ interface UseLoginReturn {
 export function useLogin(): UseLoginReturn {
   const { sendRequest, isLoading, error, clearState } = useHttp<LoginResponse, ApiError>();
   const { login: setAuthUser } = useAuth();
+  const queryClient = useQueryClient();
 
   const loginUser = useCallback(
     async (credentials: LoginRequest): Promise<LoginResponse> => {
@@ -30,8 +32,10 @@ export function useLogin(): UseLoginReturn {
         body: credentials,
       });
       setAuthUser(userData); // Update auth context on successful login
+      queryClient.removeQueries();
       return userData;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sendRequest, setAuthUser]
   );
 

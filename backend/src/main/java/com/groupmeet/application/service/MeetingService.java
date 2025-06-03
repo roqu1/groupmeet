@@ -8,6 +8,7 @@ import com.groupmeet.application.dto.MeetingParticipantDetailsDto;
 import com.groupmeet.application.dto.MeetingParticipantPreviewDto;
 import com.groupmeet.application.dto.MeetingParticipantsPageDto;
 import com.groupmeet.application.dto.MeetingSearchCriteriaDto;
+import com.groupmeet.application.dto.MeetingUpdateDto;
 import com.groupmeet.application.model.*;
 import com.groupmeet.application.repository.BlockedMeetingParticipantRepository;
 import com.groupmeet.application.repository.InterestRepository;
@@ -524,5 +525,90 @@ public class MeetingService {
         meetingRepository.delete(meeting);
         logger.info("Meeting '{}' (ID: {}) successfully deleted by organizer {}.",
                 meeting.getTitle(), meeting.getId(), organizerUsername);
+    }
+
+    @Transactional
+    public MeetingDto updateMeeting(Long meetingId, MeetingUpdateDto dto, String organizerUsername) {
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meeting nicht gefunden"));
+
+        User organizer = userRepository.findByUsername(organizerUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("Organisator nicht gefunden: " + organizerUsername));
+
+        if (!meeting.getCreator().getId().equals(organizer.getId())) {
+            logger.warn("User {} (ID: {}) attempted to update meeting {} (ID: {}) but is not the organizer.",
+                    organizer.getUsername(), organizer.getId(), meeting.getTitle(), meeting.getId());
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Nur der Organisator kann das Meeting bearbeiten.");
+        }
+
+        if (meeting.getDateTime().isBefore(LocalDateTime.now())) {
+            logger.warn("User {} attempted to update past meeting {}.", organizerUsername, meetingId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vergangene Meetings können nicht mehr bearbeitet werden.");
+        }
+
+        if (dto.getTitle() != null) {
+            meeting.setTitle(dto.getTitle());
+        }
+
+        if (dto.getDescription() != null) {
+            meeting.setDescription(dto.getDescription());
+        }
+
+        if (dto.getFormat() != null) {
+            meeting.setFormat(dto.getFormat());
+            
+            if (dto.getFormat() == MeetingFormat.OFFLINE && 
+                (dto.getLocation() == null || dto.getLocation().trim().isEmpty()) && 
+                (meeting.getLocation() == null || meeting.getLocation().trim().isEmpty())) {
+                throw new IllegalArgumentException("Ort ist für Offline-Meetings erforderlich.");
+            }
+        }
+
+        if (dto.getLocation() != null) {
+            meeting.setLocation(dto.getLocation());
+        }
+
+        if (dto.getDateTime() != null) {
+            meeting.setDateTime(dto.getDateTime());
+        }
+
+        if (dto.getMaxParticipants() != null) {
+            int currentParticipantsCount = meeting.getParticipants().size();
+            if (dto.getMaxParticipants() < currentParticipantsCount) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                    "Die maximale Teilnehmerzahl kann nicht kleiner sein als die aktuelle Anzahl der Teilnehmer (" 
+                    + currentParticipantsCount + ").");
+            }
+            meeting.setMaxParticipants(dto.getMaxParticipants());
+        }
+
+        if (dto.getMeetingTypeNames() != null && !dto.getMeetingTypeNames().isEmpty()) {
+            List<String> validInterestNames = dto.getMeetingTypeNames().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .collect(Collectors.toList());
+
+            if (validInterestNames.isEmpty()) {
+                throw new IllegalArgumentException("Mindestens eine gültige Meeting-Art ist erforderlich.");
+            }
+
+            Set<Interest> meetingInterests = new HashSet<>();
+            for (String interestName : validInterestNames) {
+                Interest interest = interestRepository.findByNameIgnoreCase(interestName)
+                        .orElseGet(() -> {
+                            logger.info("Creating new interest: {}", interestName);
+                            return interestRepository.save(new Interest(interestName));
+                        });
+                meetingInterests.add(interest);
+            }
+            meeting.setMeetingTypes(meetingInterests);
+        }
+
+        Meeting updatedMeeting = meetingRepository.save(meeting);
+        logger.info("Meeting '{}' (ID: {}) updated by organizer {}.",
+                updatedMeeting.getTitle(), updatedMeeting.getId(), organizerUsername);
+        
+        return MeetingDto.fromEntity(updatedMeeting);
     }
 }
