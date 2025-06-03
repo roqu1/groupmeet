@@ -50,7 +50,7 @@ public class AuthController {
     private UserRepository userRepository;
 
     @Autowired
-    private Environment environment; // Add this to detect development environment
+    private Environment environment;
 
     @Value("${jwt.cookie.name}")
     private String jwtCookieName;
@@ -87,17 +87,13 @@ public class AuthController {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String jwt = jwtService.generateToken(userDetails);
 
-            // Determine if we're in development environment
             boolean isDevelopment = isDevEnvironment();
 
-            // Log cookie settings for debugging
-            logger.info("Setting JWT cookie - Development mode: {}, Secure: {}",
-                    isDevelopment, !isDevelopment);
 
             // Create HTTP-only cookie with environment-appropriate security settings
             ResponseCookie jwtCookie = ResponseCookie.from(jwtCookieName, jwt)
                     .httpOnly(true)
-                    .secure(!isDevelopment) // Only secure in production
+                    .secure(false) // Secure false forever(some errors in prod environment)
                     .path("/")
                     .maxAge(jwtExpirationMs / 1000)
                     .sameSite("Lax")
@@ -126,12 +122,11 @@ public class AuthController {
     public ResponseEntity<?> logoutUser(HttpServletResponse response) {
         boolean isDevelopment = isDevEnvironment();
 
-        // Create a cookie with the same name but empty value and maxAge=0 to clear it
         ResponseCookie cookie = ResponseCookie.from(jwtCookieName, "")
                 .httpOnly(true)
-                .secure(!isDevelopment) // Match the security setting used when creating the cookie
+                .secure(!isDevelopment) // Secure false forever(some errors in prod environment)
                 .path("/")
-                .maxAge(0) // Expire immediately
+                .maxAge(0)
                 .sameSite("Lax")
                 .build();
 

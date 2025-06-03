@@ -21,8 +21,8 @@ public class EmailService {
     @Value("${app.mail.sender.address}")
     private String senderEmail;
 
-    @Value("${frontend.base.url:http://localhost:5173}")
-    private String frontendBaseUrl;
+    @Value("${cors.production.url:cors.local.url}")
+    private String baseUrl;
 
     @Async
     public void sendPasswordResetEmail(String to, String token) {
@@ -32,8 +32,7 @@ public class EmailService {
             message.setTo(to);
             message.setSubject("GroupMeet - Passwort zurücksetzen");
 
-            // TODO: replace with actual frontend URL from GM-40
-            String resetUrl = frontendBaseUrl + "/reset-password?token=" + token;
+            String resetUrl = baseUrl + "/reset-password?token=" + token;
 
             message.setText("Hallo,\n\n"
                     + "Sie haben das Zurücksetzen des Passworts für Ihr GroupMeet-Konto angefordert.\n"
