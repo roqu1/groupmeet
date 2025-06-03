@@ -1,6 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_CONFIG } from '@/config/api';
-import { getCookie } from '@/utils/cookies';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
+import { updateGroupApi } from '@/api/groups';
+import { ApiError } from '@/hooks/useHttp';
 
 export interface UpdateGroupData {
   title?: string;
@@ -17,62 +19,30 @@ interface UpdateGroupParams {
   groupData: UpdateGroupData;
 }
 
-export const useUpdateGroup = () => {
+type UpdateGroupError = ApiError;
+
+export const useUpdateGroup = (): UseMutationResult<any, UpdateGroupError, UpdateGroupParams> => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ groupId, groupData }: UpdateGroupParams) => {
-      let isoDateTime;
-      if (groupData.dateTime) {
-        const date = new Date(groupData.dateTime);
 
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
+  return useMutation<any, UpdateGroupError, UpdateGroupParams>({
+    mutationFn: ({ groupId, groupData }: UpdateGroupParams) => updateGroupApi(groupId, groupData),
 
-        isoDateTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-      }
-      const meetingTypeNames = groupData.meetingTypeNames;
-
-      const formattedData = {
-        ...groupData,
-        dateTime: isoDateTime,
-        meetingTypeNames: meetingTypeNames,
-        meetingTypeIds: undefined,
-      };
-
-      const csrfToken = getCookie('XSRF-TOKEN');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      };
-
-      if (csrfToken) {
-        headers['X-XSRF-TOKEN'] = csrfToken;
-      }
-
-      const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.meetingDetails(groupId)}`;
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: headers,
-        body: JSON.stringify(formattedData),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: 'Failed to parse error response' }));
-        throw new Error(errorData.message || `Error updating group: ${response.statusText}`);
-      }
-
-      return await response.json();
+    onSuccess: ({ groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['userMeetings'] });
+      queryClient.invalidateQueries({ queryKey: ['meetingsSearch'] });
+      queryClient.invalidateQueries({ queryKey: ['groupDetails', groupId] });
     },
-    onSuccess: (_, { groupId }) => {
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
+
+    onError: (error: UpdateGroupError) => {
+      console.error('Error updating group:', error);
+
+      if (error.validationErrors) {
+        const validationErrorMessages = error.validationErrors as Record<string, string>;
+        const messages = Object.values(validationErrorMessages).join('\n');
+        toast.error(`Fehler bei der Aktualisierung:\n${messages}`);
+      } else {
+        toast.error(`Fehler: ${error.message || 'Gruppe konnte nicht aktualisiert werden.'}`);
+      }
     },
   });
 };

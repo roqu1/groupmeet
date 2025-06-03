@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Combobox } from '@/components/ui/comboBox';
+import { Combobox, ComboboxOption } from '@/components/ui/comboBox';
 import {
   Select,
   SelectContent,
@@ -22,9 +25,10 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Edit2 } from 'lucide-react';
+import { Loader2, Edit2, AlertCircle } from 'lucide-react';
 import { LOCATION_OPTIONS } from '@/config/options';
-import { useUpdateGroup } from '@/hooks/groups/useUpdateGroup';
+import { useUpdateGroup, UpdateGroupData } from '@/hooks/groups/useUpdateGroup';
+import { useInterestOptions } from '@/hooks/options/useInterestOptions';
 import { GroupDetails } from '@/types/group';
 import { toast } from 'react-toastify';
 
@@ -33,7 +37,6 @@ interface EditGroupDialogProps {
   formatOptions:
     | ReadonlyArray<{ value: string; label: string }>
     | Array<{ value: string; label: string }>;
-  artOptions: MultiSelectOption[] | ReadonlyArray<MultiSelectOption>;
   onGroupUpdated: () => void;
 }
 
@@ -70,81 +73,152 @@ const parseIsoDateWithLocalTime = (isoString: string): Date => {
   }
 };
 
+const editGroupSchema = z
+  .object({
+    title: z.string().min(1, 'Titel ist erforderlich').max(255, 'Titel zu lang'),
+    description: z.string().optional(),
+    format: z.enum(['ONLINE', 'OFFLINE'], {
+      required_error: 'Format ist erforderlich',
+    }),
+    meetingTypeNames: z
+      .array(z.string().min(1, 'Art-Name darf nicht leer sein.'))
+      .min(1, 'Mindestens eine Art ist erforderlich')
+      .max(6, 'Maximal 5 Arten erlaubt'),
+    location: z.string().optional(),
+    dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), {
+      message: 'Ungültiges Datum/Uhrzeit',
+    }),
+    maxParticipants: z.coerce
+      .number()
+      .int()
+      .positive('Muss positiv sein')
+      .min(2, 'Mindestens 2 Teilnehmer')
+      .max(100, 'Maximal 100 Teilnehmer')
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.format === 'OFFLINE') {
+        return !!data.location && data.location.trim() !== '';
+      }
+      return true;
+    },
+    {
+      message: 'Ort ist für Offline-Meetings erforderlich',
+      path: ['location'],
+    }
+  )
+  .refine(
+    (data) => {
+      try {
+        return new Date(data.dateTime) > new Date();
+      } catch {
+        return false;
+      }
+    },
+    {
+      message: 'Datum und Uhrzeit müssen in der Zukunft liegen',
+      path: ['dateTime'],
+    }
+  );
+
+type EditGroupFormData = z.infer<typeof editGroupSchema>;
+
 const EditGroupDialog: React.FC<EditGroupDialogProps> = ({
   group,
   formatOptions,
-  artOptions,
   onGroupUpdated,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const {
+    mutate: updateGroupMutate,
+    isPending: isUpdating,
+    error: submissionError,
+  } = useUpdateGroup();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState<string>('');
-  const [maxParticipants, setMaxParticipants] = useState<string>('');
-  const [dateTime, setDateTime] = useState<Date | undefined>();
-  const [format, setFormat] = useState<'ONLINE' | 'OFFLINE'>('ONLINE');
-  const [art, setArt] = useState<string[]>([]);
+  const { data: interestOptionsData, isLoading: isLoadingInterests } = useInterestOptions();
+  const artOptions: MultiSelectOption[] =
+    interestOptionsData?.map((opt) => ({ value: opt.value, label: opt.label })) || [];
 
-  const { mutate: updateGroupMutate, isPending: isUpdating } = useUpdateGroup();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: { errors, isValid },
+  } = useForm<EditGroupFormData>({
+    resolver: zodResolver(editGroupSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      title: '',
+      description: '',
+      format: 'OFFLINE',
+      meetingTypeNames: [],
+      location: '',
+      dateTime: '',
+      maxParticipants: undefined,
+    },
+  });
+
+  const selectedFormat = watch('format');
+
   useEffect(() => {
-    if (isOpen && group) {
-      setTitle(group.title || '');
-      setDescription(group.description || '');
-      setLocation(group.location || '');
-      setMaxParticipants(group.maxParticipants ? group.maxParticipants.toString() : '');
-      setFormat(group.format || 'OFFLINE');
+    if (!isOpen || !group) return;
 
-      if (group.dateTime) {
-        const parsedDate = parseIsoDateWithLocalTime(group.dateTime);
-        setDateTime(parsedDate);
-      } else {
-        setDateTime(undefined);
-      }
+    if (isLoadingInterests || artOptions.length === 0) return;
 
-      if (
-        group.meetingTypeNames &&
-        Array.isArray(group.meetingTypeNames) &&
-        group.meetingTypeNames.length > 0
-      ) {
-        const validOptions = Array.isArray(artOptions) ? artOptions : [];
+    const formData: Partial<EditGroupFormData> = {
+      title: group.title || '',
+      description: group.description || '',
+      location: group.location || '',
+      maxParticipants: group.maxParticipants || undefined,
+      format: (group.format as 'ONLINE' | 'OFFLINE') || 'OFFLINE',
+    };
 
-        const matchingIds = group.meetingTypeNames
-          .map((name) => {
-            const match = validOptions.find((opt) => opt.label === name);
-            return match ? match.value : null;
-          })
-          .filter((id): id is string => id !== null);
-
-        if (JSON.stringify(matchingIds) !== JSON.stringify(art)) {
-          setArt([...matchingIds]);
-        }
-      } else {
-        if (art.length > 0) {
-          setArt([]);
-        }
-      }
+    if (group.dateTime) {
+      const parsedDate = parseIsoDateWithLocalTime(group.dateTime);
+      formData.dateTime = formatDateForInput(parsedDate);
     }
-  }, [isOpen, group, artOptions]);
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
 
+    if (
+      group.meetingTypeNames &&
+      Array.isArray(group.meetingTypeNames) &&
+      group.meetingTypeNames.length > 0
+    ) {
+      const matchingIds = group.meetingTypeNames
+        .map((name) => {
+          const match = artOptions.find((opt) => opt.label === name);
+          return match ? match.value : null;
+        })
+        .filter((id): id is string => id !== null);
+
+      formData.meetingTypeNames = matchingIds;
+    } else {
+      formData.meetingTypeNames = [];
+    }
+
+    reset(formData as EditGroupFormData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, group?.id, isLoadingInterests]);
+
+  const onSubmit = (data: EditGroupFormData) => {
     if (!group.id) return;
-    const localDateTime = dateTime ? new Date(dateTime) : undefined;
 
+    const localDateTime = data.dateTime ? new Date(data.dateTime) : undefined;
     const validOptions = Array.isArray(artOptions) ? artOptions : [];
-    const meetingTypeNames = art.map((artId) => {
+    const meetingTypeNames = data.meetingTypeNames.map((artId) => {
       const option = validOptions.find((opt) => opt.value === artId);
       return option ? option.label : artId;
     });
 
-    const groupData = {
-      title,
-      description,
-      location,
-      maxParticipants: maxParticipants ? parseInt(maxParticipants) : undefined,
+    const groupData: UpdateGroupData = {
+      title: data.title,
+      description: data.description,
+      location: data.location,
+      maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : undefined,
       dateTime: localDateTime,
-      format,
+      format: data.format,
       meetingTypeNames: meetingTypeNames.length > 0 ? meetingTypeNames : [],
     };
 
@@ -156,20 +230,22 @@ const EditGroupDialog: React.FC<EditGroupDialogProps> = ({
           toast.success('Meeting wurde erfolgreich aktualisiert');
           onGroupUpdated();
         },
-        onError: (error) => {
-          toast.error(
-            `Fehler beim Aktualisieren des Meetings: ${error.message || 'Unbekannter Fehler'}`
-          );
-        },
       }
     );
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open && !isUpdating) {
+      reset();
+    }
+    setIsOpen(open);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Edit2 className="mr-2 h-4 w-4" /> Meeting korrigieren
+          <Edit2 className="mr-2 h-4 w-4" /> Meeting bearbeiten
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] md:max-w-2xl">
@@ -180,116 +256,63 @@ const EditGroupDialog: React.FC<EditGroupDialogProps> = ({
             sind.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 scroll-container"
+        >
+          {submissionError && (
+            <div className="col-span-4 mb-4 p-3 border border-destructive/50 bg-destructive/10 text-destructive rounded flex items-center gap-2 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              {submissionError.message || 'Fehler beim Aktualisieren des Meetings.'}
+            </div>
+          )}
+
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-            <Label htmlFor="meeting-title" className="text-right col-span-1">
+            <Label htmlFor="title" className="text-right col-span-1">
               Name*
             </Label>
             <Input
-              id="meeting-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              id="title"
+              {...register('title')}
               className="col-span-3"
               placeholder="Titel des Meetings"
-              required
             />
+            {errors.title && (
+              <p className="col-start-2 col-span-3 text-destructive text-xs">
+                {errors.title.message}
+              </p>
+            )}
           </div>
+
           <div className="grid grid-cols-4 items-start gap-x-4 gap-y-2">
-            <Label htmlFor="meeting-description" className="text-right col-span-1 pt-2">
+            <Label htmlFor="description" className="text-right col-span-1 pt-2">
               Beschreibung
             </Label>
             <Textarea
-              id="meeting-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              id="description"
+              {...register('description')}
               className="col-span-3"
               placeholder="Beschreibe dein Meeting..."
               rows={3}
             />
-          </div>{' '}
-          {format === 'OFFLINE' && (
-            <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-              <Label htmlFor="meeting-location" className="text-right col-span-1">
-                Ort*
-              </Label>
-              <Combobox
-                id="meeting-location"
-                options={LOCATION_OPTIONS}
-                value={location}
-                onSelect={setLocation}
-                placeholder="Ort wählen..."
-                className="col-span-3"
-              />
-            </div>
-          )}
-          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-            <Label htmlFor="meeting-max-participants" className="text-right col-span-1">
-              Max. Teilnehmer
-            </Label>
-            <Input
-              id="meeting-max-participants"
-              type="number"
-              min="2"
-              max="100"
-              value={maxParticipants}
-              onChange={(e) => {
-                const value = e.target.value;
-                const numberValue = parseInt(value);
-                if (!isNaN(numberValue)) {
-                  if (numberValue > 100) {
-                    setMaxParticipants('100');
-                  } else if (numberValue < 2) {
-                    setMaxParticipants('2');
-                  } else {
-                    setMaxParticipants(value);
-                  }
-                } else {
-                  setMaxParticipants(value);
-                }
-              }}
-              className="col-span-3"
-              placeholder="z.B. 25 (min. 2, max. 100)"
-            />
           </div>
-          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-            <Label htmlFor="meeting-datetime" className="text-right col-span-1">
-              Datum & Zeit*
-            </Label>
-            <Input
-              id="meeting-datetime"
-              type="datetime-local"
-              value={dateTime ? formatDateForInput(dateTime) : ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  const selectedDate = new Date(e.target.value);
-                  setDateTime(selectedDate);
-                } else {
-                  setDateTime(undefined);
-                }
-              }}
-              className="col-span-3"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-            <Label htmlFor="meeting-format" className="text-right col-span-1">
-              Format*
-            </Label>{' '}
-            <Select
-              value={format}
-              onValueChange={(value: string) => {
-                const newFormat = value as 'ONLINE' | 'OFFLINE';
-                setFormat(newFormat);
 
-                if (newFormat === 'ONLINE') {
-                  setLocation('');
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
+            <Label htmlFor="format" className="text-right col-span-1">
+              Format*
+            </Label>
+            <Select
+              value={selectedFormat}
+              onValueChange={(value) => {
+                setValue('format', value as 'ONLINE' | 'OFFLINE', { shouldValidate: true });
+                if (value === 'ONLINE') {
+                  setValue('location', '', { shouldValidate: true });
                 }
               }}
-              required
             >
-              <SelectTrigger id="meeting-format" className="col-span-3">
+              <SelectTrigger id="format" className="col-span-3">
                 <SelectValue placeholder="Format wählen..." />
-              </SelectTrigger>{' '}
+              </SelectTrigger>
               <SelectContent>
                 {Array.isArray(formatOptions) &&
                   formatOptions.map((o) => (
@@ -299,33 +322,100 @@ const EditGroupDialog: React.FC<EditGroupDialogProps> = ({
                   ))}
               </SelectContent>
             </Select>
-          </div>{' '}
-          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
-            <Label htmlFor="meeting-art" className="text-right col-span-1">
-              Art/Kategorie
-            </Label>{' '}
-            <MultiSelect
-              id="meeting-art"
-              options={Array.isArray(artOptions) ? [...artOptions] : []}
-              selected={art}
-              onValueChange={(newValues) => {
-                const updatedValues = [...newValues];
+            {errors.format && (
+              <p className="col-start-2 col-span-3 text-destructive text-xs">
+                {errors.format.message}
+              </p>
+            )}
+          </div>
 
-                if (JSON.stringify(art.sort()) !== JSON.stringify(updatedValues.sort())) {
-                  setArt([...updatedValues]);
-                }
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
+            <Label htmlFor="meetingTypeNames" className="text-right col-span-1">
+              Art/Kategorie*
+            </Label>
+            <MultiSelect
+              id="meetingTypeNames"
+              options={artOptions}
+              selected={watch('meetingTypeNames') || []}
+              onValueChange={(newValues) => {
+                setValue('meetingTypeNames', newValues, { shouldValidate: true });
               }}
-              placeholder="Art wählen..."
+              placeholder={isLoadingInterests ? 'Laden...' : 'Art wählen...'}
+              disabled={isLoadingInterests}
               className="col-span-3"
             />
+            {errors.meetingTypeNames && (
+              <p className="col-start-2 col-span-3 text-destructive text-xs">
+                {errors.meetingTypeNames.message}
+              </p>
+            )}
           </div>
+
+          {selectedFormat === 'OFFLINE' && (
+            <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
+              <Label htmlFor="location" className="text-right col-span-1">
+                Ort*
+              </Label>
+              <Combobox
+                id="location"
+                options={LOCATION_OPTIONS as ComboboxOption[]}
+                value={watch('location') || ''}
+                onSelect={(value) => setValue('location', value, { shouldValidate: true })}
+                placeholder="Ort wählen..."
+                className="col-span-3"
+              />
+              {errors.location && (
+                <p className="col-start-2 col-span-3 text-destructive text-xs">
+                  {errors.location.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
+            <Label htmlFor="dateTime" className="text-right col-span-1">
+              Datum & Zeit*
+            </Label>
+            <Input
+              id="dateTime"
+              type="datetime-local"
+              {...register('dateTime')}
+              className="col-span-3"
+            />
+            {errors.dateTime && (
+              <p className="col-start-2 col-span-3 text-destructive text-xs">
+                {errors.dateTime.message}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
+            <Label htmlFor="maxParticipants" className="text-right col-span-1">
+              Max. Teilnehmer
+            </Label>
+            <Input
+              id="maxParticipants"
+              type="number"
+              min="2"
+              max="100"
+              {...register('maxParticipants')}
+              className="col-span-3"
+              placeholder="z.B. 25 (min. 2, max. 100)"
+            />
+            {errors.maxParticipants && (
+              <p className="col-start-2 col-span-3 text-destructive text-xs">
+                {errors.maxParticipants.message}
+              </p>
+            )}
+          </div>
+
           <DialogFooter className="mt-4">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={isUpdating}>
                 Abbrechen
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isUpdating}>
+            <Button type="submit" disabled={isUpdating || !isValid}>
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Speichern
             </Button>

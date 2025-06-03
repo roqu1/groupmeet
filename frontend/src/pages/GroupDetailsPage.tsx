@@ -36,7 +36,6 @@ import { useDeleteMeeting } from '@/hooks/groups/useDeleteMeeting';
 import { LOCATION_OPTIONS, MEETING_FORMAT_CREATION_OPTIONS } from '@/config/options';
 import { getFullAvatarUrl } from '@/utils/imageUrl';
 import EditGroupDialog from '@/components/groups/EditGroupDialog';
-import { useInterestOptions } from '@/hooks/options/useInterestOptions';
 import { toast } from 'react-toastify';
 
 const GroupDetailsPage = () => {
@@ -46,8 +45,6 @@ const GroupDetailsPage = () => {
   const { data: group, isLoading, isFetching, isError, error, refetch } = useGroupDetails(groupId);
   const { mutate: deleteMeetingMutate, isPending: isDeletingGroupHook } = useDeleteMeeting();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const { data: interestOptions = [] } = useInterestOptions();
 
   const { mutate: joinGroupMutate, isPending: isJoiningGroup } = useJoinGroup();
   const { mutate: leaveGroupMutate, isPending: isLeavingGroup } = useLeaveGroup();
@@ -184,7 +181,6 @@ const GroupDetailsPage = () => {
                     <EditGroupDialog
                       group={group}
                       formatOptions={MEETING_FORMAT_CREATION_OPTIONS}
-                      artOptions={interestOptions}
                       onGroupUpdated={handleGroupUpdated}
                     />
                     {showDeleteButton && (
