@@ -17,5 +17,5 @@ Welcome to the GroupMeet documentation. This page provides links to all document
 
 ## Other Resources
 
-- [Backend API JavaDocs](../backend/build/docs/javadoc/index.html) - Generated API documentation (available after building)
+- [Backend API JavaDocs](../backend/build/docs/javadoc/index.html) - Generated API documentation (available after building the backend with `./gradlew javadoc`)
 - [GitHub Repository](https://github.com/roqu1/groupmeet) - Source code repository

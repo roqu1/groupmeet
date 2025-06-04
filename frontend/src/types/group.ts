@@ -38,6 +38,7 @@ export interface GroupParticipant {
   isOrganizer: boolean;
   gender: Gender;
   participationStatus: 'ACTIVE' | 'BLOCKED';
+  pro: boolean;
 }
 
 export interface GroupParticipantsData {

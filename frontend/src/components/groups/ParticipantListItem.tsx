@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { GroupParticipant, Gender } from '@/types/group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/Badge';
 import {
   MoreHorizontal,
   ShieldAlert,
@@ -12,6 +13,7 @@ import {
   Mars,
   Venus,
   VenusAndMars,
+  Crown,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -94,6 +96,12 @@ const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
               {participant.firstName} {participant.lastName}
             </Link>
             <GenderIconDisplay gender={participant.gender} />
+            {participant.pro && (
+              <Badge className="ml-1 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 border-yellow-300 text-xs">
+                <Crown className="h-2.5 w-2.5 mr-0.5" />
+                PRO
+              </Badge>
+            )}
           </div>
           <p
             className="text-xs sm:text-sm text-muted-foreground truncate"

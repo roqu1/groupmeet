@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { UserProfile, ProfileFriendshipStatus } from '@/types/user';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/Badge';
 import {
   Pencil,
   UserPlus,
@@ -13,6 +14,7 @@ import {
   MapPin,
   MinusCircle,
   X,
+  Crown,
 } from 'lucide-react';
 import { useSendFriendRequest } from '@/hooks/friend-requests/useSendFriendRequest';
 import { useAcceptFriendRequest } from '@/hooks/friend-requests/useAcceptFriendRequest';
@@ -218,7 +220,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile, isOwnProfile }) 
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
             {profile.firstName} {profile.lastName}
           </h1>
-          <p className="text-md text-muted-foreground">@{profile.username}</p>
+          <div className="flex items-center justify-center sm:justify-start gap-2">
+            <p className="text-md text-muted-foreground">@{profile.username}</p>
+            {profile.pro && (
+              <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 border-yellow-300">
+                <Crown className="h-3 w-3 mr-1" />
+                PRO
+              </Badge>
+            )}
+          </div>
           <div className="mt-2 space-y-1 text-sm text-muted-foreground">
             {profile.location && (
               <div className="flex items-center justify-center sm:justify-start">

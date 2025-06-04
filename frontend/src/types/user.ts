@@ -22,6 +22,7 @@ export interface UserSearchResult {
   location: string | null;
   interests: string[] | null;
   friendshipStatus: SearchFriendshipStatus;
+  pro: boolean;
 }
 
 export interface SearchUsersParams {
@@ -68,4 +69,5 @@ export interface UserProfile {
   friendsCount: number;
   friendPreviews: FriendSummary[];
   pendingFriendRequestsCount?: number;
+  pro: boolean;
 }

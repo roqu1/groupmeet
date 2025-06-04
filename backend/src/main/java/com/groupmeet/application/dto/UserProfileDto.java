@@ -20,6 +20,7 @@ public class UserProfileDto {
     private int friendsCount;
     private List<FriendSummaryDto> friendPreviews;
     private Integer pendingFriendRequestsCount;
+    private boolean isPro; // New field
 
     public UserProfileDto() {
     }
@@ -150,5 +151,13 @@ public class UserProfileDto {
 
     public void setPendingFriendRequestsCount(Integer pendingFriendRequestsCount) {
         this.pendingFriendRequestsCount = pendingFriendRequestsCount;
+    }
+
+    public boolean isPro() {
+        return isPro;
+    }
+
+    public void setPro(boolean pro) {
+        isPro = pro;
     }
 }

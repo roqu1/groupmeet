@@ -111,6 +111,7 @@ export const fetchGroupParticipants = async ({
       isOrganizer: participant.isOrganizer,
       gender: participant.gender,
       participationStatus: participant.participationStatus as 'ACTIVE' | 'BLOCKED',
+      pro: participant.pro,
     })
   );
 

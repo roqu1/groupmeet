@@ -1,5 +1,6 @@
 package com.groupmeet.application.controller;
 
+import com.groupmeet.application.controller.AuthController.ErrorResponse;
 import com.groupmeet.application.controller.AuthController.MessageResponse;
 import com.groupmeet.application.dto.MeetingCreationDto;
 import com.groupmeet.application.dto.MeetingDetailDto;
@@ -26,20 +27,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class MeetingController {
 
     @Autowired
-    private MeetingService meetingService;
-
-    @PostMapping
-    public ResponseEntity<MeetingDto> createMeeting(
+    private MeetingService meetingService;    @PostMapping
+    public ResponseEntity<?> createMeeting(
             @Valid @RequestBody MeetingCreationDto meetingCreationDto,
             @AuthenticationPrincipal UserDetails currentUserDetails) {
         if (currentUserDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        try {
+        }        try {
             MeetingDto createdMeeting = meetingService.createMeeting(meetingCreationDto, currentUserDetails.getUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdMeeting);
         } catch (IllegalArgumentException e) {
-             return ResponseEntity.badRequest().body(null);
+             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(new ErrorResponse(e.getReason()));
         }
     }
 
@@ -49,9 +49,8 @@ public class MeetingController {
             @PageableDefault(size = 10, sort = "dateTime", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<MeetingDto> meetings = meetingService.searchMeetings(criteria, pageable);
         return ResponseEntity.ok(meetings);
-    }
- @GetMapping("/{meetingId}")
-    public ResponseEntity<MeetingDetailDto> getMeetingById(
+    } @GetMapping("/{meetingId}")
+    public ResponseEntity<?> getMeetingById(
             @PathVariable Long meetingId,
             @AuthenticationPrincipal UserDetails currentUserDetails) {
         try {
@@ -59,9 +58,9 @@ public class MeetingController {
             MeetingDetailDto meetingDetailDto = meetingService.getMeetingDetailsById(meetingId, currentUsername);
             return ResponseEntity.ok(meetingDetailDto);
         } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatusCode()).body(null); 
+            return ResponseEntity.status(e.getStatusCode()).body(new ErrorResponse(e.getReason())); 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Fehler beim Laden der Meeting-Details."));
         }
     }
     
