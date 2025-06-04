@@ -12,6 +12,7 @@ public class MeetingParticipantDetailsDto {
     private Gender gender;
     private boolean isOrganizer;
     private String participationStatus;
+    private boolean pro;
 
     public MeetingParticipantDetailsDto() {}
 
@@ -25,6 +26,7 @@ public class MeetingParticipantDetailsDto {
         dto.setGender(user.getGender());
         dto.setOrganizer(isOrganizer);
         dto.setParticipationStatus(participationStatus);
+        dto.setPro(user.isPro());
         return dto;
     }
 
@@ -44,4 +46,6 @@ public class MeetingParticipantDetailsDto {
     public void setOrganizer(boolean organizer) { isOrganizer = organizer; }
     public String getParticipationStatus() { return participationStatus; }
     public void setParticipationStatus(String participationStatus) { this.participationStatus = participationStatus; }
+    public boolean isPro() { return pro; }
+    public void setPro(boolean pro) { this.pro = pro; }
 }

@@ -11,10 +11,25 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+
 @Repository
 public interface MeetingRepository extends JpaRepository<Meeting, Long>, JpaSpecificationExecutor<Meeting> {
 
      @Query("SELECT m FROM Meeting m JOIN m.participants p WHERE p = :user ORDER BY m.dateTime ASC")
     Page<Meeting> findMeetingsByParticipantOrderByDateTimeAsc(@Param("user") User user, Pageable pageable);
+
+    long countByCreatorAndDateTimeBetween(User creator, LocalDateTime startDateTime, LocalDateTime endDateTime);
+
+    @Query("SELECT COUNT(m) FROM Meeting m WHERE m.creator = :creator AND m.dateTime >= :startDateTime AND m.dateTime <= :endDateTime AND m.id <> :excludeMeetingId")
+    long countByCreatorAndDateTimeBetweenAndIdNot(
+        @Param("creator") User creator,
+        @Param("startDateTime") LocalDateTime startDateTime,
+        @Param("endDateTime") LocalDateTime endDateTime,
+        @Param("excludeMeetingId") Long excludeMeetingId
+    );
+    
+    @Query("SELECT COUNT(m) FROM Meeting m JOIN m.participants p WHERE p = :user AND m.dateTime > :now")
+    long countActiveMeetingsUserIsParticipantIn(@Param("user") User user, @Param("now") LocalDateTime now);
 
 }

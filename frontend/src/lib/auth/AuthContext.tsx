@@ -12,6 +12,7 @@ export interface AuthUser {
   username: string;
   email: string;
   createdAt: string;
+  isPro: boolean;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   login: (user: AuthUser) => void; // Function called after successful backend login
   logout: () => void; // Function called after successful backend logout
   checkAuthStatus: () => Promise<void>; // Function to manually re-check auth status
+  updateCurrentUser: (updatedUserData: Partial<AuthUser>) => void; // For updating after subscription
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,6 +79,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthLoading(false);
   };
 
+  const updateCurrentUser = (updatedUserData: Partial<AuthUser>) => {
+    setCurrentUser((prevUser) => (prevUser ? { ...prevUser, ...updatedUserData } : null));
+  };
+
   const isAuthenticated = !!currentUser;
 
   useEffect(() => {
@@ -95,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         checkAuthStatus,
+        updateCurrentUser,
       }}
     >
       {children}
