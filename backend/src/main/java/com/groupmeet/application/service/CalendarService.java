@@ -38,8 +38,8 @@ public class CalendarService {
     @Autowired
     private FriendshipRepository friendshipRepository;
 
-    @Autowired
-    private MeetingRepository meetingRepository; // Assuming this exists based on your structure
+    // @Autowired
+    // private MeetingRepository meetingRepository; // Commented out until Meeting entity is ready
 
     /**
      * Get complete calendar data for a user within a date range.
@@ -191,6 +191,7 @@ public class CalendarService {
     /**
      * Get meeting events for a user within a date range.
      * This method would integrate with your existing meeting system.
+     * Currently returns empty list until Meeting entity is properly integrated.
      *
      * @param user the user whose meetings to retrieve
      * @param startDate start of the date range
@@ -198,10 +199,9 @@ public class CalendarService {
      * @return list of calendar events representing meetings
      */
     private List<CalendarEventDto> getMeetingEventsForUser(User user, LocalDate startDate, LocalDate endDate) {
-        // This method needs to be implemented based on your Meeting entity structure
-        // Since I can't see your Meeting entity, I'm providing the structure you'll need
+        // TODO: Implement this method once Meeting entity structure is finalized
 
-        /* Example implementation (you'll need to adapt based on your Meeting entity):
+        /* Example implementation once Meeting entity is ready:
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
@@ -214,8 +214,8 @@ public class CalendarService {
             .collect(Collectors.toList());
         */
 
-        // Placeholder implementation - replace with actual meeting integration
-        logger.warn("Meeting integration not yet implemented - returning empty events list");
+        // Placeholder implementation - returns empty list to avoid compilation errors
+        logger.debug("Meeting integration not yet implemented - returning empty events list for user {}", user.getUsername());
         return List.of();
     }
 
@@ -223,38 +223,41 @@ public class CalendarService {
      * Convert a Meeting entity to a CalendarEventDto.
      * This helper method transforms meeting data into calendar-friendly format.
      *
+     * Currently commented out until Meeting entity structure is finalized.
+     *
      * @param meeting the meeting entity
      * @param user the current user (to determine if they're the organizer)
      * @return calendar event DTO
      */
+    /*
     private CalendarEventDto convertMeetingToCalendarEvent(Meeting meeting, User user) {
         try {
-            // Extract data from the Meeting entity
+            // TODO: Update these method calls based on your actual Meeting entity structure
             return new CalendarEventDto(
-                    meeting.getId(), // Retrieve the meeting ID
-                    meeting.getTitle(), // Retrieve the meeting title
-                    meeting.getDescription(), // Retrieve the meeting description
-                    meeting.getDateTime(), // Retrieve the meeting date/time
-                    meeting.getLocation(), // Retrieve the meeting location
-                    meeting.getFormat(), // Retrieve the meeting format
-                    meeting.getOrganizer().equals(user), // Check if the user is the organizer
-                    meeting.getParticipants().size() // Retrieve the participant count
+                meeting.getId(), // Assumes Meeting has getId() method
+                meeting.getTitle(), // Assumes Meeting has getTitle() method
+                meeting.getDescription(), // Assumes Meeting has getDescription() method
+                meeting.getDateTime(), // Assumes Meeting has getDateTime() method
+                meeting.getLocation(), // Assumes Meeting has getLocation() method
+                meeting.getFormat(), // Assumes Meeting has getFormat() method
+                meeting.getOrganizer().equals(user), // Assumes Meeting has getOrganizer() method
+                meeting.getParticipants().size() // Assumes Meeting has getParticipants() method
             );
         } catch (Exception e) {
             logger.error("Error converting meeting to calendar event: {}", e.getMessage());
-            // Return a fallback DTO in case of errors
             return new CalendarEventDto(
-                    meeting.getId(),
-                    "Event Title Unavailable",
-                    "Event details could not be loaded",
-                    LocalDateTime.now(),
-                    "Location TBD",
-                    "OFFLINE",
-                    false,
-                    0
+                0L, // Fallback ID
+                "Error Loading Meeting",
+                "Could not load meeting details",
+                LocalDateTime.now(),
+                "Unknown Location",
+                "OFFLINE",
+                false,
+                0
             );
         }
     }
+    */
 
     /**
      * Convert PersonalNote entity to PersonalNoteDto.
