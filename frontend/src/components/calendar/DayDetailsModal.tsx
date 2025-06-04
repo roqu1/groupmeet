@@ -48,7 +48,6 @@ export default function DayDetailsModal({
   isOwnCalendar,
   onDataChange,
 }: DayDetailsModalProps) {
-
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteContent, setNoteContent] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

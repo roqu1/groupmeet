@@ -78,7 +78,7 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
 
         const response = await fetch(url, fetchOptions);
 
-        let responseData: any = null;
+        let responseData: unknown = null;
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.indexOf('application/json') !== -1) {
           responseData = await response.json();
@@ -95,15 +95,16 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
           let errorMessage = `HTTP error! status: ${response.status}`;
           let validationErrors: Record<string, string> | undefined = undefined;
 
-          if (responseData) {
-            if (responseData.message) {
-              errorMessage = responseData.message;
-            } else if (responseData.error) {
-              errorMessage = responseData.error;
+          if (responseData && typeof responseData === 'object') {
+            const errorData = responseData as Record<string, unknown>;
+            if (errorData.message && typeof errorData.message === 'string') {
+              errorMessage = errorData.message;
+            } else if (errorData.error && typeof errorData.error === 'string') {
+              errorMessage = errorData.error;
             }
-            if (responseData.errors && typeof responseData.errors === 'object') {
+            if (errorData.errors && typeof errorData.errors === 'object') {
               errorMessage = 'Validation failed';
-              validationErrors = responseData.errors;
+              validationErrors = errorData.errors as Record<string, string>;
             }
           }
 
