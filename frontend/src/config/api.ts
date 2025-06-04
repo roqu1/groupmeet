@@ -33,5 +33,6 @@ export const API_CONFIG = {
     removeMeetingParticipant: (meetingId: string, userId: number): string =>
       `/api/meetings/${meetingId}/participants/${userId}/remove`,
     deleteMeeting: (meetingId: string): string => `/api/meetings/${meetingId}`,
+    subscribeToPro: '/api/users/subscribe',
   },
 } as const;

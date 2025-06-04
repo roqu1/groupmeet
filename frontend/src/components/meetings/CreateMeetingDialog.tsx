@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { PlusCircle, Loader2 } from 'lucide-react';
 import { LOCATION_OPTIONS, MEETING_FORMAT_CREATION_OPTIONS } from '@/config/options';
 import { MeetingFormat, MeetingCreationPayload } from '@/types/meeting';
 import { useCreateMeeting } from '@/hooks/meetings/useCreateMeeting';
@@ -91,11 +91,7 @@ const getDefaultDateTime = () => {
 
 const CreateMeetingDialog: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const {
-    mutate: createMeetingMutate,
-    isPending: isSubmitting,
-    error: submissionError,
-  } = useCreateMeeting();
+  const { mutate: createMeetingMutate, isPending: isSubmitting } = useCreateMeeting();
 
   const { data: interestOptionsData, isLoading: isLoadingInterests } = useInterestOptions();
   const artOptions: MultiSelectOption[] =
@@ -174,20 +170,6 @@ const CreateMeetingDialog: React.FC = () => {
           onSubmit={handleSubmit(onSubmit)}
           className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 scroll-container"
         >
-          {submissionError && (
-            <div className="col-span-4 mb-4 p-3 border border-destructive/50 bg-destructive/10 text-destructive rounded flex items-center gap-2 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              {submissionError.message || 'Fehler beim Erstellen des Meetings.'}
-              {submissionError.validationErrors && (
-                <ul className="list-disc list-inside text-xs mt-1">
-                  {Object.entries(submissionError.validationErrors).map(([field, message]) => (
-                    <li key={field}>{`${message}`}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2">
             <Label htmlFor="title" className="text-right col-span-1">
               Name*
