@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Calendar as BigCalendar,
   dateFnsLocalizer,
@@ -19,7 +19,6 @@ import DayDetailsModal from './DayDetailsModal';
 import { useCalendarData } from '@/hooks/calendar/useCalendarData';
 import { useCalendar } from '@/hooks/calendar/useCalendar';
 import { BigCalendarEvent, DayDetails } from '@/types/calendar';
-import { formatDateForApi } from '@/config/api';
 
 /**
  * Main Calendar component that integrates react-big-calendar with our calendar system.
@@ -33,6 +32,7 @@ import { formatDateForApi } from '@/config/api';
 interface CalendarProps {
   userId?: number; // If provided, shows another user's calendar (friend view)
   className?: string;
+  onRefreshReady?: (refreshFn: () => Promise<void>) => void; // ADDED: Callback to expose refresh function
 }
 
 // Calendar configuration constants
@@ -69,7 +69,15 @@ const messages = {
   showMore: (total: number) => `+ ${total} weitere`,
 };
 
-export default function Calendar({ userId, className }: CalendarProps) {
+// FIXED: Timezone-safe date formatting
+const formatDateForApi = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export default function Calendar({ userId, className, onRefreshReady }: CalendarProps) {
   // Calendar data and state management
   const {
     calendarData,
@@ -80,6 +88,15 @@ export default function Calendar({ userId, className }: CalendarProps) {
     changeCurrentDate,
     clearError,
   } = useCalendarData({ userId });
+
+  // ADDED: Expose refresh function to parent
+  useEffect(() => {
+    onRefreshReady?.(refreshCalendarData);
+  }, [refreshCalendarData, onRefreshReady]);
+
+  // FIXED: Add navigation and view state
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<View>('month');
 
   // Day details modal state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -93,7 +110,7 @@ export default function Calendar({ userId, className }: CalendarProps) {
   // Determine if this is the current user's calendar
   const isOwnCalendar = !userId;
 
-  // Handle date/slot selection (when user clicks on a date)
+  // FIXED: Handle date/slot selection with timezone-safe formatting
   const handleSelectSlot = useCallback(
     async ({ start }: { start: Date }) => {
       const dateString = formatDateForApi(start);
@@ -123,13 +140,19 @@ export default function Calendar({ userId, className }: CalendarProps) {
     }
   }, []);
 
-  // Handle calendar navigation (month/week/day changes)
+  // FIXED: Handle calendar navigation (month/week/day changes)
   const handleNavigate = useCallback(
     (newDate: Date) => {
+      setCurrentDate(newDate);
       changeCurrentDate(newDate);
     },
     [changeCurrentDate]
   );
+
+  // FIXED: Handle view changes (Monat, Woche, Tag, etc.)
+  const handleViewChange = useCallback((newView: View) => {
+    setCurrentView(newView);
+  }, []);
 
   // Close modal and refresh data if needed
   const handleCloseModal = useCallback(() => {
@@ -138,7 +161,7 @@ export default function Calendar({ userId, className }: CalendarProps) {
     setDayDetails(null);
   }, []);
 
-  // Refresh calendar data after modal changes
+  // FIXED: Refresh calendar data after modal changes
   const handleDataChange = useCallback(() => {
     refreshCalendarData();
   }, [refreshCalendarData]);
@@ -172,7 +195,6 @@ export default function Calendar({ userId, className }: CalendarProps) {
   // Custom day background component to show dates with notes
   const DayBackgroundComponent = useCallback(
     (props: DateCellWrapperProps) => {
-      // Korrigierte Version mit dem richtigen DateCellWrapperProps-Typ
       const dateString = formatDateForApi(props.value);
       const hasNote = calendarData?.datesWithNotes?.includes(dateString);
 
@@ -263,10 +285,14 @@ export default function Calendar({ userId, className }: CalendarProps) {
           titleAccessor="title"
           allDayAccessor="allDay"
           resourceAccessor="resource"
+          // FIXED: Navigation and view control
+          date={currentDate}
+          view={currentView}
           // Event handlers
           onSelectEvent={handleSelectEvent}
           onSelectSlot={handleSelectSlot}
           onNavigate={handleNavigate}
+          onView={handleViewChange}
           // Calendar configuration
           selectable={true}
           popup={true}

@@ -1,33 +1,32 @@
+import { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarDays, ArrowLeft } from 'lucide-react';
+import { CalendarDays, ArrowLeft, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import Calendar from '@/components/calendar/Calendar';
-
-/**
- * Calendar page component that displays the user's personal calendar.
- * This component handles requirement A_1 (new calendar page accessible to authenticated users).
- *
- * Routes:
- * - /calendar or /my-calendar - Shows current user's calendar
- * - /profile/{userId}/calendar - Shows specific user's calendar (friends only)
- */
+import CreateMeetingDialog from '@/components/meetings/CreateMeetingDialog';
 
 export default function CalendarPage() {
-  // Fixed: Simplified useParams type - React Router will handle the type inference
   const { userId } = useParams<{ userId?: string }>();
+  const [showInstructions, setShowInstructions] = useState(true);
 
-  // Convert userId to number if provided, otherwise undefined for own calendar
+  // FIXED: Use useCallback to prevent re-renders
+  const [calendarRefresh, setCalendarRefresh] = useState<(() => Promise<void>) | null>(null);
+
   const userIdNumber = userId ? parseInt(userId, 10) : undefined;
   const isOwnCalendar = !userIdNumber;
+
+  // FIXED: Wrap in useCallback to prevent re-renders
+  const handleRefreshReady = useCallback((refreshFn: () => Promise<void>) => {
+    setCalendarRefresh(() => refreshFn);
+  }, []);
 
   return (
     <div className="container-wrapper py-8">
       {/* Page Header */}
       <div className="mb-6">
         {isOwnCalendar ? (
-          // Own calendar header
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -38,9 +37,9 @@ export default function CalendarPage() {
                 Verwalten Sie Ihre Termine und persönlichen Notizen an einem Ort.
               </p>
             </div>
+            <CreateMeetingDialog onMeetingCreated={calendarRefresh || undefined} />
           </div>
         ) : (
-          // Friend's calendar header
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -63,41 +62,53 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Calendar Instructions/Help */}
-      <div className="mb-6 p-4 bg-accent/50 border rounded-lg">
-        <h3 className="font-semibold mb-2">So verwenden Sie den Kalender:</h3>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>
-            • <strong>Klicken Sie auf ein Datum</strong>, um Termine und Notizen für diesen Tag
-            anzuzeigen
-          </li>
-          <li>
-            • <strong>Klicken Sie auf einen Termin</strong>, um zur Detailseite des Meetings zu
-            gelangen
-          </li>
-          {isOwnCalendar && (
-            <>
-              <li>
-                • <strong>Fügen Sie persönliche Notizen hinzu</strong>, indem Sie auf ein Datum
-                klicken
-              </li>
-              <li>
-                • <strong>Termine werden automatisch hinzugefügt</strong>, wenn Sie Meetings
-                beitreten
-              </li>
-            </>
-          )}
-          <li>
-            • <strong>Navigieren Sie durch Monate</strong> mit den Pfeiltasten oder der
-            Datumsauswahl
-          </li>
-        </ul>
-      </div>
+      {/* Dismissible Calendar Instructions */}
+      {showInstructions && (
+        <div className="mb-6 p-4 bg-accent/50 border rounded-lg relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowInstructions(false)}
+            className="absolute top-2 right-2 h-6 w-6 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <h3 className="font-semibold mb-2">So verwenden Sie den Kalender:</h3>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li>
+              • <strong>Klicken Sie auf ein Datum</strong>, um Termine und Notizen für diesen Tag
+              anzuzeigen
+            </li>
+            <li>
+              • <strong>Klicken Sie auf einen Termin</strong>, um zur Detailseite des Meetings zu
+              gelangen
+            </li>
+            {isOwnCalendar && (
+              <>
+                <li>
+                  • <strong>Fügen Sie persönliche Notizen hinzu</strong>, indem Sie auf ein Datum
+                  klicken
+                </li>
+                <li>
+                  • <strong>Termine werden automatisch hinzugefügt</strong>, wenn Sie Meetings
+                  beitreten
+                </li>
+              </>
+            )}
+            <li>
+              • <strong>Navigieren Sie durch Monate</strong> mit den Pfeiltasten oder der
+              Datumsauswahl
+            </li>
+          </ul>
+        </div>
+      )}
 
-      {/* Main Calendar Component */}
-      <Calendar userId={userIdNumber} className="calendar-page-container" />
+      <Calendar
+        userId={userIdNumber}
+        className="calendar-page-container"
+        onRefreshReady={handleRefreshReady}
+      />
 
-      {/* Footer Information */}
       <div className="mt-8 text-center text-sm text-muted-foreground">
         <p>
           {isOwnCalendar
