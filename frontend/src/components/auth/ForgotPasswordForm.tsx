@@ -96,14 +96,14 @@ const ForgotPasswordForm = () => {
       clearStatus();
       setRateLimitError(null);
     }
-  }, [emailValue, initialRequestDone]);
+  }, [emailValue, initialRequestDone, apiError, clearStatus, rateLimitError, successMessage]);
 
   useEffect(() => {
     return () => {
       clearStatus();
       setRateLimitError(null);
     };
-  }, []);
+  }, [clearStatus]);
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     if (remainingSeconds > 0 || isApiLoading) return;

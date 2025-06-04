@@ -94,15 +94,7 @@ export function useCalendarData(options: UseCalendarDataOptions = {}): UseCalend
         start: eventDate,
         end: new Date(eventDate.getTime() + 2 * 60 * 60 * 1000), // Default 2-hour duration
         allDay: false,
-        resource: {
-          // Attach additional data that might be useful in event components
-          description: event.description,
-          location: event.location,
-          format: event.format,
-          isOrganizer: event.isOrganizer,
-          participantCount: event.participantCount,
-          originalEvent: event, // Keep reference to original data
-        },
+        resource: event, // Directly use the CalendarEvent as resource
       };
     });
   }, [calendarData]);

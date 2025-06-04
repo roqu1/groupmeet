@@ -61,7 +61,7 @@ export interface BigCalendarEvent {
   start: Date;
   end: Date;
   allDay?: boolean;
-  resource?: any; // Additional data we want to attach to the event
+  resource?: CalendarEvent; // Additional data we want to attach to the event
 }
 
 /**
