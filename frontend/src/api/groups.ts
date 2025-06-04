@@ -8,6 +8,7 @@ import {
 import { Page } from '../types/pagination';
 import { API_CONFIG } from '../config/api';
 import { getCookie } from '@/utils/cookies';
+import { UpdateGroupData } from '../hooks/groups/useUpdateGroup';
 
 export const fetchGroupDetails = async (groupId: string): Promise<GroupDetails> => {
   const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.meetingDetails(groupId)}`;
@@ -267,6 +268,59 @@ export const removeGroupParticipant = async (
     throw {
       message: errorData.message || `Error removing participant: ${response.statusText}`,
       statusCode: response.status,
+    };
+  }
+
+  return response.json();
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const updateGroupApi = async (groupId: string, groupData: UpdateGroupData): Promise<any> => {
+  // Format dateTime if provided
+  let isoDateTime;
+  if (groupData.dateTime) {
+    const date = new Date(groupData.dateTime);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    isoDateTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
+  const formattedData = {
+    ...groupData,
+    dateTime: isoDateTime,
+    meetingTypeNames: groupData.meetingTypeNames,
+    meetingTypeIds: undefined,
+  };
+
+  const url = `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.meetingDetails(groupId)}`;
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-XSRF-TOKEN'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: headers,
+    body: JSON.stringify(formattedData),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: 'Failed to parse error response' }));
+    throw {
+      message: errorData.message || `Error updating group: ${response.statusText}`,
+      statusCode: response.status,
+      validationErrors: errorData.errors,
     };
   }
 

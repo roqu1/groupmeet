@@ -24,6 +24,7 @@ export const useDeleteMeeting = (): UseMutationResult<
       queryClient.removeQueries({ queryKey: ['groupDetails', meetingId] });
       queryClient.removeQueries({ queryKey: ['groupParticipants', { groupId: meetingId }] });
       queryClient.invalidateQueries({ queryKey: ['userMeetings'] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       navigate('/');
     },
     onError: (error: DeleteMeetingError, meetingId) => {
