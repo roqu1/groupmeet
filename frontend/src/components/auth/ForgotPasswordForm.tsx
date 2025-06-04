@@ -38,13 +38,10 @@ const ForgotPasswordForm = () => {
     register,
     handleSubmit,
     formState: { errors, isValid },
-    watch,
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
     mode: 'onTouched',
   });
-
-  const emailValue = watch('email');
 
   useEffect(() => {
     const storedEndTime = localStorage.getItem(COOLDOWN_STORAGE_KEY);
@@ -96,14 +93,14 @@ const ForgotPasswordForm = () => {
       clearStatus();
       setRateLimitError(null);
     }
-  }, [emailValue, initialRequestDone]);
+  }, [initialRequestDone, apiError, clearStatus, rateLimitError, successMessage]);
 
   useEffect(() => {
     return () => {
       clearStatus();
       setRateLimitError(null);
     };
-  }, []);
+  }, [clearStatus]);
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     if (remainingSeconds > 0 || isApiLoading) return;

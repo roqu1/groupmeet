@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import {
   Search,
   Filter as FilterIcon,
@@ -7,6 +9,7 @@ import {
   ChevronUp,
   Loader2,
   AlertCircle,
+  Calendar,
 } from 'lucide-react';
 import CreateMeetingDialog from '@/components/meetings/CreateMeetingDialog';
 import MeetingCard from '@/components/meetings/MeetingCard';
@@ -23,7 +26,6 @@ import { useMeetingsSearch } from '@/hooks/meetings/useMeetingsSearch';
 import MeetingsFilterPanel from '@/components/meetings/MeetingsFilterPanel';
 import { useInterestOptions } from '@/hooks/options/useInterestOptions';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Button } from '@/components/ui/button';
 
 const DEFAULT_PAGE_SIZE = 6;
 const MIN_CARD_LIST_HEIGHT_PX = 400;
@@ -245,7 +247,15 @@ const HomePage = () => {
         <h1 className="text-3xl font-bold text-foreground text-center sm:text-left">
           Finde passende Meetings
         </h1>
-        <CreateMeetingDialog />
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link to="/calendar" className="flex items-center justify-center">
+              <Calendar className="mr-2 h-4 w-4" />
+              Kalender
+            </Link>
+          </Button>
+          <CreateMeetingDialog />
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-2 space-y-6">

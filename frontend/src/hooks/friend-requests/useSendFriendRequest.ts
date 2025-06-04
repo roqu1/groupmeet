@@ -10,10 +10,6 @@ type SendFriendRequestError = Error;
 
 type SendFriendRequestVariables = number;
 
-/**
- * Custom hook to send a friend request.
- * Uses React Query's useMutation for handling the API call, state, and side effects.
- */
 export const useSendFriendRequest = (
   onSettledCallback?: () => void
 ): UseMutationResult<SendFriendRequestData, SendFriendRequestError, SendFriendRequestVariables> => {

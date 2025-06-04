@@ -1,5 +1,4 @@
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 export const API_CONFIG = {
   baseUrl: BACKEND_URL,
   endpoints: {
@@ -33,6 +32,26 @@ export const API_CONFIG = {
     removeMeetingParticipant: (meetingId: string, userId: number): string =>
       `/api/meetings/${meetingId}/participants/${userId}/remove`,
     deleteMeeting: (meetingId: string): string => `/api/meetings/${meetingId}`,
+    calendar: '/api/calendar',
+    userCalendar: (userId: string | number): string => `/api/calendar/${userId}`,
+    calendarDay: (date: string): string => `/api/calendar/day/${date}`,
+    userCalendarDay: (userId: string | number, date: string): string =>
+      `/api/calendar/${userId}/day/${date}`,
+    calendarNotes: '/api/calendar/notes',
+    calendarNoteDelete: (date: string): string => `/api/calendar/notes/${date}`,
     subscribeToPro: '/api/users/subscribe',
   },
 } as const;
+export const buildCalendarDateParams = (startDate: string, endDate: string): string =>
+  new URLSearchParams({ startDate, endDate }).toString();
+export const formatDateForApi = (date: Date): string => date.toISOString().split('T')[0];
+export const getMonthDateRange = (date: Date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const startDate = new Date(year, month, 1);
+  const endDate = new Date(year, month + 1, 0);
+  return {
+    startDate: formatDateForApi(startDate),
+    endDate: formatDateForApi(endDate),
+  };
+};

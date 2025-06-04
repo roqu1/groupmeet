@@ -8,11 +8,6 @@ interface FetchFriendsParams {
   searchTerm?: string;
 }
 
-/**
- * Fetches a paginated list of the current user's friends.
- * @param {FetchFriendsParams} params Parameters for pagination ({ page, size, searchTerm }).
- * @returns {Promise<FriendsPage>} A promise resolving with a page of friends and pagination info.
- */
 export const fetchFriends = async ({
   page = 0,
   size = 10,
@@ -45,11 +40,6 @@ export const fetchFriends = async ({
   return data;
 };
 
-/**
- * Removes a friend by their ID.
- * @param {number} friendId The ID of the friend to remove.
- * @returns {Promise<void>} A promise that resolves when the friend is removed.
- */
 export const removeFriend = async (friendId: number): Promise<void> => {
   const endpoint = API_CONFIG.endpoints.friendById(friendId);
   const url = `${API_CONFIG.baseUrl}${endpoint}`;

@@ -24,7 +24,6 @@ export interface UseHttpReturn<T, E = ApiError> {
   clearState: () => void;
 }
 
-// Helper function to get CSRF token from cookies
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -35,26 +34,11 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-/**
- * Base hook for making HTTP requests to the API
- *
- * @template T - Response data type
- * @template E - Error type (defaults to ApiError)
- * @returns Object with request function and states
- */
 export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<E | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  /**
-   * Sends HTTP request to the specified endpoint
-   *
-   * @param endpoint - API endpoint (without base URL)
-   * @param options - Request options (method, headers, body, etc.)
-   * @returns Promise with response data
-   * @throws Error if request fails
-   */
   const sendRequest = useCallback(
     async (endpoint: string, options: FetchOptions = {}): Promise<T> => {
       let currentError: E | null = null;
@@ -69,7 +53,6 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
           Accept: 'application/json',
         };
 
-        // Add CSRF token header for non-safe methods
         if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
           const csrfToken = getCookie('XSRF-TOKEN');
           if (csrfToken) {
@@ -95,8 +78,7 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
 
         const response = await fetch(url, fetchOptions);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let responseData: any = null;
+        let responseData: unknown = null;
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.indexOf('application/json') !== -1) {
           responseData = await response.json();
@@ -113,15 +95,16 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
           let errorMessage = `HTTP error! status: ${response.status}`;
           let validationErrors: Record<string, string> | undefined = undefined;
 
-          if (responseData) {
-            if (responseData.message) {
-              errorMessage = responseData.message;
-            } else if (responseData.error) {
-              errorMessage = responseData.error;
+          if (responseData && typeof responseData === 'object') {
+            const errorData = responseData as Record<string, unknown>;
+            if (errorData.message && typeof errorData.message === 'string') {
+              errorMessage = errorData.message;
+            } else if (errorData.error && typeof errorData.error === 'string') {
+              errorMessage = errorData.error;
             }
-            if (responseData.errors && typeof responseData.errors === 'object') {
+            if (errorData.errors && typeof errorData.errors === 'object') {
               errorMessage = 'Validation failed';
-              validationErrors = responseData.errors;
+              validationErrors = errorData.errors as Record<string, string>;
             }
           }
 
@@ -152,9 +135,6 @@ export function useHttp<T, E = ApiError>(): UseHttpReturn<T, E> {
     []
   );
 
-  /**
-   * Resets all hook states
-   */
   const clearState = useCallback(() => {
     setData(null);
     setError(null);

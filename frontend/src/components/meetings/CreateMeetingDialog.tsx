@@ -89,7 +89,13 @@ const getDefaultDateTime = () => {
   return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}T${String(tomorrow.getHours()).padStart(2, '0')}:${String(tomorrow.getMinutes()).padStart(2, '0')}`;
 };
 
-const CreateMeetingDialog: React.FC = () => {
+// ADDED: Interface for props
+interface CreateMeetingDialogProps {
+  onMeetingCreated?: () => void;
+}
+
+// UPDATED: Component signature to accept props
+const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({ onMeetingCreated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { mutate: createMeetingMutate, isPending: isSubmitting } = useCreateMeeting();
 
@@ -130,6 +136,7 @@ const CreateMeetingDialog: React.FC = () => {
       onSuccess: () => {
         reset();
         setIsOpen(false);
+        onMeetingCreated?.(); // ADDED: Call calendar refresh
       },
     });
   };
