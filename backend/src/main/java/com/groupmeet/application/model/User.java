@@ -81,6 +81,9 @@ public class User {
     @JoinTable(name = "user_interests", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "interest_id"))
     private Set<Interest> interests = new HashSet<>();
 
+    @Column(name = "is_pro", nullable = false, columnDefinition = "boolean default false")
+    private boolean isPro = false;
+
     public User() {
         this.createdAt = LocalDateTime.now();
     }
@@ -93,6 +96,7 @@ public class User {
         this.email = email;
         this.password = password;
         this.createdAt = LocalDateTime.now();
+        this.isPro = false; // Default for new users
     }
 
     public Long getId() {
@@ -203,5 +207,13 @@ public class User {
     public void removeInterest(Interest interest) {
         this.interests.remove(interest);
         interest.getUsers().remove(this);
+    }
+
+    public boolean isPro() {
+        return isPro;
+    }
+
+    public void setPro(boolean pro) {
+        isPro = pro;
     }
 }

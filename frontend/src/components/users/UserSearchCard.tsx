@@ -3,7 +3,17 @@ import { Link } from 'react-router-dom';
 import { UserSearchResult, Gender } from '@/types/user';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { UserPlus, CheckCircle, Clock, Loader2, Venus, Mars, VenusAndMars } from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
+import {
+  UserPlus,
+  CheckCircle,
+  Clock,
+  Loader2,
+  Venus,
+  Mars,
+  VenusAndMars,
+  Crown,
+} from 'lucide-react';
 import { getFullAvatarUrl } from '@/utils/imageUrl';
 
 interface UserSearchCardProps {
@@ -100,6 +110,12 @@ const UserSearchCard: React.FC<UserSearchCardProps> = ({ user, onAddFriend, isAd
               {user.firstName} {user.lastName}
             </Link>
             <GenderIconDisplay gender={user.gender} />
+            {user.pro && (
+              <Badge className="ml-1.5 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 border-yellow-300 text-xs">
+                <Crown className="h-2.5 w-2.5 mr-0.5" />
+                PRO
+              </Badge>
+            )}
           </div>
           <p
             className="text-xs sm:text-sm text-muted-foreground truncate"

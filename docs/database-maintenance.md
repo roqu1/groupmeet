@@ -2,17 +2,25 @@
 
 ## Sequence Reset
 
-PostgreSQL uses sequences for auto-incrementing IDs. Sometimes these sequences can get out of sync with the actual data (due to manual inserts, data migrations, etc.). If you encounter errors like "duplicate key value violates unique constraint" (error code SQLState: 23505), you may need to reset the sequences:
+PostgreSQL uses sequences for auto-incrementing IDs. Sometimes these sequences can get out of sync with the actual data (due to manual inserts, data migrations, etc.). If you encounter errors like "duplicate key value violates unique constraint" (error code SQLState: 23505), you may need to reset the sequences for the affected table.
 
 ```bash
 # Connect to PostgreSQL container
 docker-compose exec db psql -U postgres -d groupmeet
 
-# Inside PostgreSQL console, for a specific table
+# Inside PostgreSQL console, for a specific table (replace table_name and table_name_id_seq)
 SELECT setval('table_name_id_seq', (SELECT MAX(id) FROM table_name), true);
 
 # Example for friendships table
 SELECT setval('friendships_id_seq', (SELECT MAX(id) FROM friendships), true);
+
+# Other potential tables:
+# SELECT setval('users_id_seq', (SELECT MAX(id) FROM users), true);
+# SELECT setval('meetings_id_seq', (SELECT MAX(id) FROM meetings), true);
+# SELECT setval('interests_id_seq', (SELECT MAX(id) FROM interests), true);
+# SELECT setval('locations_id_seq', (SELECT MAX(id) FROM locations), true);
+# SELECT setval('meeting_blocked_participants_id_seq', (SELECT MAX(id) FROM meeting_blocked_participants), true);
+
 
 # You can exit psql with \q
 ```

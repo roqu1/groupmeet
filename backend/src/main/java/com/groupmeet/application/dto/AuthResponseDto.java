@@ -9,8 +9,9 @@ public class AuthResponseDto {
     private String username;
     private String email;
     private String createdAt;
+    private boolean isPro;
 
-    public AuthResponseDto(Long id, String gender, String firstName, String lastName, String username, String email, String createdAt) {
+    public AuthResponseDto(Long id, String gender, String firstName, String lastName, String username, String email, String createdAt, boolean isPro) {
         this.id = id;
         this.gender = gender;
         this.firstName = firstName;
@@ -18,6 +19,7 @@ public class AuthResponseDto {
         this.username = username;
         this.email = email;
         this.createdAt = createdAt;
+        this.isPro = isPro;
     }
 
     public static AuthResponseDto fromUser(com.groupmeet.application.model.User user) {
@@ -28,7 +30,8 @@ public class AuthResponseDto {
                 user.getLastName(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getCreatedAt() != null ? user.getCreatedAt().toString() : null
+                user.getCreatedAt() != null ? user.getCreatedAt().toString() : null,
+                user.isPro()
         );
     }
 
@@ -39,4 +42,5 @@ public class AuthResponseDto {
     public String getUsername() { return username; }
     public String getEmail() { return email; }
     public String getCreatedAt() { return createdAt; }
+    public boolean isPro() { return isPro; }
 }
