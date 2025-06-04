@@ -1,0 +1,272 @@
+/* src/styles/calendar.css - Custom styling for react-big-calendar to support light/dark themes */
+
+/**
+ * Custom CSS overrides for react-big-calendar to ensure proper display
+ * in both light and dark themes. This addresses requirement A_3.
+ */
+
+/* Base calendar container styling */
+.calendar-container .rbc-calendar {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+}
+
+/* Calendar header (toolbar) styling */
+.rbc-toolbar {
+  background-color: hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 1rem;
+  margin-bottom: 0;
+}
+
+.rbc-toolbar button {
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  padding: 0.5rem 1rem;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.rbc-toolbar button:hover {
+  background-color: hsl(var(--accent));
+  border-color: hsl(var(--accent-foreground));
+}
+
+.rbc-toolbar button:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.rbc-toolbar-label {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: hsl(var(--foreground));
+}
+
+/* Calendar header row (day names) */
+.rbc-header {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.rbc-header + .rbc-header {
+  border-left: 1px solid hsl(var(--border));
+}
+
+/* Calendar body and cells */
+.rbc-month-view {
+  background-color: hsl(var(--background));
+  border: none;
+}
+
+.rbc-date-cell {
+  padding: 0.5rem;
+  text-align: right;
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  min-height: 100px;
+  background-color: hsl(var(--background));
+  position: relative;
+}
+
+.rbc-date-cell:hover {
+  background-color: hsl(var(--accent));
+  cursor: pointer;
+}
+
+.rbc-date-cell.rbc-off-range {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.rbc-date-cell.rbc-off-range:hover {
+  background-color: hsl(var(--muted));
+}
+
+/* Today's date highlighting */
+.rbc-today {
+  background-color: hsl(var(--primary) / 0.1) !important;
+}
+
+.rbc-date-cell.rbc-today .rbc-button-link {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* Date numbers in cells */
+.rbc-button-link {
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  padding: 0.25rem;
+  border-radius: calc(var(--radius) - 4px);
+  transition: all 0.2s ease;
+}
+
+.rbc-button-link:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Events styling */
+.rbc-event {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.25rem 0.5rem;
+  margin: 1px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.1);
+  transition: all 0.2s ease;
+}
+
+.rbc-event:hover {
+  background-color: hsl(var(--primary) / 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px hsl(var(--foreground) / 0.15);
+}
+
+.rbc-event:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+
+/* Selected event */
+.rbc-event.rbc-selected {
+  background-color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+/* Week and day views */
+.rbc-time-view {
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+}
+
+.rbc-time-header {
+  background-color: hsl(var(--muted));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.rbc-time-content {
+  background-color: hsl(var(--background));
+}
+
+.rbc-time-gutter {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.rbc-time-slot {
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+}
+
+.rbc-timeslot-group {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Agenda view */
+.rbc-agenda-view {
+  background-color: hsl(var(--background));
+}
+
+.rbc-agenda-view table {
+  border: 1px solid hsl(var(--border));
+}
+
+.rbc-agenda-view .rbc-agenda-table thead th {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.75rem;
+  font-weight: 600;
+}
+
+.rbc-agenda-view .rbc-agenda-table tbody td {
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.75rem;
+  color: hsl(var(--foreground));
+}
+
+.rbc-agenda-view .rbc-agenda-table tbody tr:hover {
+  background-color: hsl(var(--accent));
+}
+
+/* Show more link */
+.rbc-show-more {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rbc-show-more:hover {
+  background-color: hsl(var(--secondary) / 0.8);
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .rbc-toolbar .rbc-btn-group {
+    display: flex;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .rbc-toolbar button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .rbc-date-cell {
+    min-height: 80px;
+    padding: 0.25rem;
+  }
+
+  .rbc-event {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .rbc-header {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+  }
+}

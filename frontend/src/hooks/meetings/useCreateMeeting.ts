@@ -22,8 +22,20 @@ export const useCreateMeeting = (): UseMutationResult<
     onError: (error) => {
       console.error('Error creating meeting:', error);
       if (error.validationErrors) {
-        const validationErrorMessages = error.validationErrors as Record<string, string>;
-        const messages = Object.values(validationErrorMessages).join('\n');
+        // Korrekte Verarbeitung von validationErrors als Record<string, string[]>
+        const errorMessages: string[] = [];
+
+        // Extrahieren aller Fehlermeldungen aus den Arrays
+        Object.entries(error.validationErrors).forEach(([field, errors]) => {
+          if (Array.isArray(errors)) {
+            errors.forEach((errorMsg) => {
+              errorMessages.push(`${field}: ${errorMsg}`);
+            });
+          }
+        });
+
+        // Zusammenfügen aller Fehlermeldungen
+        const messages = errorMessages.join('\n');
         toast.error(`Fehler bei der Erstellung:\n${messages}`);
       } else {
         toast.error(`Fehler: ${error.message || 'Meeting konnte nicht erstellt werden.'}`);
