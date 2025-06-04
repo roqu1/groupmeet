@@ -17,6 +17,7 @@ public class UserSearchResultDto {
     private String location;
     private List<String> interests;
     private String friendshipStatus;
+    private boolean pro;
 
     public UserSearchResultDto() {
     }
@@ -35,6 +36,7 @@ public class UserSearchResultDto {
             dto.setInterests(user.getInterests().stream().map(Interest::getName).collect(Collectors.toList()));
         }
         dto.setFriendshipStatus(friendshipStatus);
+        dto.setPro(user.isPro());
         return dto;
     }
 
@@ -108,5 +110,13 @@ public class UserSearchResultDto {
 
     public void setFriendshipStatus(String friendshipStatus) {
         this.friendshipStatus = friendshipStatus;
+    }
+
+    public boolean isPro() {
+        return pro;
+    }
+
+    public void setPro(boolean pro) {
+        this.pro = pro;
     }
 }

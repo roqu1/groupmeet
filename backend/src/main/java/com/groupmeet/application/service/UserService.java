@@ -238,6 +238,7 @@ public class UserService {
         dto.setAvatarUrl(profileUser.getAvatarUrl());
         dto.setLocation(profileUser.getLocation());
         dto.setAboutMe(profileUser.getAboutMe());
+        dto.setPro(profileUser.isPro());
 
         if (profileUser.getBirthDate() != null) {
             dto.setAge(Period.between(profileUser.getBirthDate(), LocalDate.now()).getYears());
@@ -301,5 +302,19 @@ public class UserService {
         }
         
         return dto;
+    }
+
+    @Transactional
+    public User subscribeUserToPro(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + username));
+
+        if (user.isPro()) {
+            throw new IllegalStateException("Benutzer ist bereits Pro-Abonnent.");
+        }
+
+        user.setPro(true);
+        logger.info("Benutzer {} wurde zum Pro-Abonnenten.", username);
+        return userRepository.save(user);
     }
 }
