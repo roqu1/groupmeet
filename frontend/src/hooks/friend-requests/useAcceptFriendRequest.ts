@@ -23,6 +23,8 @@ export const useAcceptFriendRequest = (
     onSuccess: (data) => {
       toast.success(data.message || 'Freundschaftsanfrage angenommen!');
       queryClient.invalidateQueries({ queryKey: ['incomingFriendRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['friends'] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },
     onError: (error) => {
       toast.error(`Fehler: ${error.message || 'Anfrage konnte nicht angenommen werden.'}`);

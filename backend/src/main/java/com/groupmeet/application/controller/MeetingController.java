@@ -6,6 +6,7 @@ import com.groupmeet.application.dto.MeetingDetailDto;
 import com.groupmeet.application.dto.MeetingDto;
 import com.groupmeet.application.dto.MeetingParticipantsPageDto;
 import com.groupmeet.application.dto.MeetingSearchCriteriaDto;
+import com.groupmeet.application.dto.MeetingUpdateDto;
 import com.groupmeet.application.service.MeetingService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -190,6 +191,27 @@ public class MeetingController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new AuthController.ErrorResponse("Fehler beim Löschen des Meetings."));
+        }
+    }
+
+    @PutMapping("/{meetingId}")
+    public ResponseEntity<?> updateMeeting(
+            @PathVariable Long meetingId,
+            @Valid @RequestBody MeetingUpdateDto meetingUpdateDto,
+            @AuthenticationPrincipal UserDetails currentUserDetails) {
+        if (currentUserDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            MeetingDto updatedMeeting = meetingService.updateMeeting(meetingId, meetingUpdateDto, currentUserDetails.getUsername());
+            return ResponseEntity.ok(updatedMeeting);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(new AuthController.ErrorResponse(e.getReason()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new AuthController.ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthController.ErrorResponse("Fehler beim Aktualisieren des Meetings."));
         }
     }
 
