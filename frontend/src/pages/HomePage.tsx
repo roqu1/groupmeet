@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-// Import Link for navigation to calendar page
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -10,7 +9,6 @@ import {
   ChevronUp,
   Loader2,
   AlertCircle,
-  // Import Calendar icon for the navigation button
   Calendar,
 } from 'lucide-react';
 import CreateMeetingDialog from '@/components/meetings/CreateMeetingDialog';
@@ -245,21 +243,17 @@ const HomePage = () => {
 
   return (
     <div className="container-wrapper py-8">
-      {/* Updated header section with calendar navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 lg:mb-8 gap-4">
         <h1 className="text-3xl font-bold text-foreground text-center sm:text-left">
           Finde passende Meetings
         </h1>
-        {/* Action buttons container - groups related actions together */}
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          {/* Calendar navigation button - uses Link for proper React Router navigation */}
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link to="/calendar" className="flex items-center justify-center">
               <Calendar className="mr-2 h-4 w-4" />
               Kalender
             </Link>
           </Button>
-          {/* Existing Create Meeting Dialog */}
           <CreateMeetingDialog />
         </div>
       </div>

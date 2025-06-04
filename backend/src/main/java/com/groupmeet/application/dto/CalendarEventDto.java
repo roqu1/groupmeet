@@ -3,10 +3,6 @@ package com.groupmeet.application.dto;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-/**
- * DTO representing a calendar event (meeting) for display in the calendar.
- * This consolidates meeting information into a format suitable for calendar display.
- */
 public class CalendarEventDto {
     private Long id;
     private String title;

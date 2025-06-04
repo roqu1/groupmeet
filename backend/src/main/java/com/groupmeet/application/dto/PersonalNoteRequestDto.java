@@ -5,10 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-/**
- * DTO for creating or updating personal notes.
- * Used in request bodies when users create or edit notes.
- */
 public class PersonalNoteRequestDto {
     @NotNull(message = "Datum ist erforderlich")
     @JsonFormat(pattern = "yyyy-MM-dd")

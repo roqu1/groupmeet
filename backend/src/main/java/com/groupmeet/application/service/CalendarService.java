@@ -18,11 +18,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Service class for calendar-related operations.
- * Handles both personal notes and meeting calendar integration.
- * Follows the same pattern as your existing UserService.
- */
 @Service
 @Validated
 public class CalendarService {
@@ -42,15 +37,6 @@ public class CalendarService {
     @Autowired
     private MeetingRepository meetingRepository;
 
-    /**
-     * Get complete calendar data for a user within a date range.
-     * This includes both meetings and personal notes.
-     *
-     * @param username the username of the calendar owner
-     * @param startDate the start date for calendar data
-     * @param endDate the end date for calendar data
-     * @return calendar data containing events and notes
-     */
     @Transactional(readOnly = true)
     public CalendarDataDto getCalendarData(String username, LocalDate startDate, LocalDate endDate) {
         User user = userRepository.findByUsername(username)
@@ -75,14 +61,6 @@ public class CalendarService {
         return new CalendarDataDto(events, notes, datesWithNotes);
     }
 
-    /**
-     * Get detailed information for a specific date.
-     * This is called when a user clicks on a calendar date.
-     *
-     * @param username the username of the calendar owner
-     * @param date the specific date to get details for
-     * @return day details including events and notes for that date
-     */
     @Transactional(readOnly = true)
     public DayDetailsDto getDayDetails(String username, LocalDate date) {
         User user = userRepository.findByUsername(username)
@@ -102,14 +80,6 @@ public class CalendarService {
         return new DayDetailsDto(date, eventsForDay, noteForDay);
     }
 
-    /**
-     * Create or update a personal note for a specific date.
-     * If a note already exists for that date, it will be updated.
-     *
-     * @param username the username of the note owner
-     * @param request the note request data
-     * @return the created or updated note
-     */
     @Transactional
     public PersonalNoteDto savePersonalNote(String username, @Valid PersonalNoteRequestDto request) {
         User user = userRepository.findByUsername(username)
@@ -137,12 +107,6 @@ public class CalendarService {
         return convertToDto(savedNote);
     }
 
-    /**
-     * Delete a personal note for a specific date.
-     *
-     * @param username the username of the note owner
-     * @param date the date of the note to delete
-     */
     @Transactional
     public void deletePersonalNote(String username, LocalDate date) {
         User user = userRepository.findByUsername(username)
@@ -157,14 +121,6 @@ public class CalendarService {
         }
     }
 
-    /**
-     * Check if a viewer has permission to access another user's calendar.
-     * Calendar access is restricted to friends only (as per requirement A_11).
-     *
-     * @param calendarOwnerUsername the owner of the calendar
-     * @param viewerUsername the user trying to view the calendar
-     * @return true if access is allowed, false otherwise
-     */
     @Transactional(readOnly = true)
     public boolean canViewCalendar(String calendarOwnerUsername, String viewerUsername) {
         // User can always view their own calendar
@@ -189,15 +145,6 @@ public class CalendarService {
         return canView;
     }
 
-    /**
-     * FIXED: Get meeting events for a user within a date range.
-     * This method integrates with your existing meeting system.
-     *
-     * @param user the user whose meetings to retrieve
-     * @param startDate start of the date range
-     * @param endDate end of the date range
-     * @return list of calendar events representing meetings
-     */
     private List<CalendarEventDto> getMeetingEventsForUser(User user, LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
@@ -217,14 +164,6 @@ public class CalendarService {
         }
     }
 
-    /**
-     * FIXED: Convert a Meeting entity to a CalendarEventDto.
-     * This helper method transforms meeting data into calendar-friendly format.
-     *
-     * @param meeting the meeting entity
-     * @param user the current user (to determine if they're the organizer)
-     * @return calendar event DTO
-     */
     private CalendarEventDto convertMeetingToCalendarEvent(Meeting meeting, User user) {
         try {
             return new CalendarEventDto(
@@ -252,12 +191,6 @@ public class CalendarService {
         }
     }
 
-    /**
-     * Convert PersonalNote entity to PersonalNoteDto.
-     *
-     * @param note the personal note entity
-     * @return personal note DTO
-     */
     private PersonalNoteDto convertToDto(PersonalNote note) {
         return new PersonalNoteDto(
                 note.getId(),
@@ -268,9 +201,6 @@ public class CalendarService {
         );
     }
 
-    /**
-     * Custom exception for calendar-related business logic errors.
-     */
     public static class CalendarException extends RuntimeException {
         public CalendarException(String message) {
             super(message);

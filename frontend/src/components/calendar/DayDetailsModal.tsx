@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/Badge'; // Konsistente Großschreibung verwenden
+import { Badge } from '@/components/ui/Badge';
 import {
   Calendar,
   Clock,
@@ -31,17 +31,6 @@ import { toast } from 'react-toastify';
 import { DayDetails, CalendarEvent, PersonalNoteRequest } from '@/types/calendar';
 import { useCalendar } from '@/hooks/calendar/useCalendar';
 
-/**
- * Modal component that displays detailed information for a selected calendar date.
- * This component handles requirements A_8, A_9, and A_10 from the ticket:
- * - A_8: Modal window opens when clicking on a date
- * - A_9: Shows meetings and notes for the date, with editing capabilities
- * - A_10: Allows navigation to meeting detail pages
- *
- * The modal serves as a comprehensive day view, allowing users to see all their
- * scheduled events and manage their personal notes for any given date.
- */
-
 interface DayDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,7 +48,7 @@ export default function DayDetailsModal({
   isOwnCalendar,
   onDataChange,
 }: DayDetailsModalProps) {
-  // State for note editing functionality
+
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteContent, setNoteContent] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -79,14 +68,12 @@ export default function DayDetailsModal({
     clearError();
   }, [dayDetails, clearError]);
 
-  // Handle note content changes
   const handleNoteContentChange = (newContent: string) => {
     setNoteContent(newContent);
     const originalContent = dayDetails?.noteForDay?.content || '';
     setHasUnsavedChanges(newContent !== originalContent);
   };
 
-  // Save note (create new or update existing)
   const handleSaveNote = async () => {
     if (!selectedDate || !noteContent.trim()) {
       toast.error('Notizinhalt darf nicht leer sein.');
@@ -109,7 +96,6 @@ export default function DayDetailsModal({
     }
   };
 
-  // Delete existing note
   const handleDeleteNote = async () => {
     if (!selectedDate || !dayDetails?.noteForDay) {
       return;
@@ -131,7 +117,6 @@ export default function DayDetailsModal({
     }
   };
 
-  // Cancel note editing
   const handleCancelEdit = () => {
     const originalContent = dayDetails?.noteForDay?.content || '';
     setNoteContent(originalContent);
@@ -140,7 +125,6 @@ export default function DayDetailsModal({
     clearError();
   };
 
-  // Format date for display
   const formatDisplayDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);
@@ -150,7 +134,6 @@ export default function DayDetailsModal({
     }
   };
 
-  // Format event time for display
   const formatEventTime = (dateTimeString: string): string => {
     try {
       const dateTime = new Date(dateTimeString);
@@ -160,7 +143,6 @@ export default function DayDetailsModal({
     }
   };
 
-  // Get format badge color based on meeting format
   const getFormatBadgeVariant = (format: string) => {
     switch (format) {
       case 'ONLINE':
@@ -194,7 +176,6 @@ export default function DayDetailsModal({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Meetings/Events Section */}
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -257,7 +238,6 @@ export default function DayDetailsModal({
             )}
           </div>
 
-          {/* Personal Note Section - Only show for own calendar */}
           {isOwnCalendar && (
             <div>
               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -275,7 +255,6 @@ export default function DayDetailsModal({
               )}
 
               {isEditingNote ? (
-                // Note editing mode
                 <div className="space-y-3">
                   <Textarea
                     value={noteContent}
@@ -316,7 +295,6 @@ export default function DayDetailsModal({
                   </div>
                 </div>
               ) : (
-                // Note display mode
                 <div>
                   {dayDetails?.noteForDay ? (
                     <div className="space-y-3">
@@ -363,7 +341,6 @@ export default function DayDetailsModal({
             </div>
           )}
 
-          {/* Personal Note Section - Read-only for other users' calendars */}
           {!isOwnCalendar && dayDetails?.noteForDay && (
             <div>
               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">

@@ -20,15 +20,6 @@ import { useCalendarData } from '@/hooks/calendar/useCalendarData';
 import { useCalendar } from '@/hooks/calendar/useCalendar';
 import { BigCalendarEvent, DayDetails } from '@/types/calendar';
 
-/**
- * Main Calendar component that integrates react-big-calendar with our calendar system.
- * This component handles requirements A_2, A_3, A_4, A_5, A_6 from the ticket:
- * - A_2: Integrates react-big-calendar component
- * - A_3: Correct display in light and dark themes
- * - A_4: Shows meetings the user participates in
- * - A_5/A_6: Automatically updates when user joins/leaves meetings
- */
-
 interface CalendarProps {
   userId?: number; // If provided, shows another user's calendar (friend view)
   className?: string;
@@ -131,7 +122,6 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
     [getDayDetails]
   );
 
-  // Handle event selection (when user clicks on an event)
   const handleSelectEvent = useCallback((event: BigCalendarEvent) => {
     // Navigate to meeting details page
     const meetingId = event.resource?.id;
@@ -140,7 +130,6 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
     }
   }, []);
 
-  // FIXED: Handle calendar navigation (month/week/day changes)
   const handleNavigate = useCallback(
     (newDate: Date) => {
       setCurrentDate(newDate);
@@ -149,24 +138,20 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
     [changeCurrentDate]
   );
 
-  // FIXED: Handle view changes (Monat, Woche, Tag, etc.)
   const handleViewChange = useCallback((newView: View) => {
     setCurrentView(newView);
   }, []);
 
-  // Close modal and refresh data if needed
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedDate(null);
     setDayDetails(null);
   }, []);
 
-  // FIXED: Refresh calendar data after modal changes
   const handleDataChange = useCallback(() => {
     refreshCalendarData();
   }, [refreshCalendarData]);
 
-  // Custom event component to show meeting details
   const EventComponent = useCallback(({ event }: { event: BigCalendarEvent }) => {
     const resource = event.resource;
     return (
@@ -192,7 +177,6 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
     );
   }, []);
 
-  // Custom day background component to show dates with notes
   const DayBackgroundComponent = useCallback(
     (props: DateCellWrapperProps) => {
       const dateString = formatDateForApi(props.value);
@@ -234,7 +218,6 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
     );
   }
 
-  // Error state
   if (error && !calendarData) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -258,7 +241,6 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Calendar Header Info */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5" />
@@ -275,7 +257,6 @@ export default function Calendar({ userId, className, onRefreshReady }: Calendar
         )}
       </div>
 
-      {/* Main Calendar Component */}
       <div className="calendar-container bg-background border rounded-lg p-4" aria-label="Kalender">
         <BigCalendar
           localizer={localizer}

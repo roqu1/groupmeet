@@ -17,7 +17,6 @@ import FriendRequestsPage from './pages/FriendRequestsPage';
 import GroupDetailsPage from './pages/GroupDetailsPage';
 import 'react-toastify/dist/ReactToastify.css';
 import GroupParticipantsListPage from './pages/GroupParticipantsListPage';
-// Import the CalendarPage component you've created
 import CalendarPage from './pages/CalendarPage';
 
 function App() {
@@ -38,7 +37,6 @@ function App() {
           {/* Protected Routes (redirect if not logged in) */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<HomePage />} />
-            {/* NEW: Calendar route - users can access their personal calendar */}
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/friends" element={<FriendsListPage />} />
             <Route path="/find-friends" element={<FindFriendsPage />} />

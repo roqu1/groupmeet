@@ -10,10 +10,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/**
- * Entity representing personal notes that users can add to specific dates in their calendar.
- * Each user can have one note per date, and notes are private to the user who created them.
- */
 @Entity
 @Table(name = "personal_notes",
         uniqueConstraints = {
@@ -48,19 +44,9 @@ public class PersonalNote {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    /**
-     * Default constructor for JPA
-     */
     public PersonalNote() {
     }
 
-    /**
-     * Constructor for creating a new personal note
-     *
-     * @param user the user who owns this note
-     * @param noteDate the date this note is associated with
-     * @param content the text content of the note
-     */
     public PersonalNote(User user, LocalDate noteDate, String content) {
         if (user == null) {
             throw new IllegalArgumentException("Benutzer darf nicht null sein.");
@@ -119,11 +105,6 @@ public class PersonalNote {
         return updatedAt;
     }
 
-    /**
-     * Updates the content of this note
-     *
-     * @param newContent the new content for the note
-     */
     public void updateContent(String newContent) {
         if (newContent == null || newContent.trim().isEmpty()) {
             throw new IllegalArgumentException("Neuer Notizinhalt darf nicht leer sein.");

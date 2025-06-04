@@ -4,13 +4,11 @@ import { API_CONFIG } from '../../config/api';
 import { AuthUser, useAuth } from '@/lib/auth/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 
-// Matches backend LoginRequestDto
 interface LoginRequest {
   usernameOrEmail: string;
   password: string;
 }
 
-// Matches backend AuthResponseDto
 type LoginResponse = AuthUser;
 
 interface UseLoginReturn {
@@ -35,7 +33,6 @@ export function useLogin(): UseLoginReturn {
       queryClient.removeQueries();
       return userData;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sendRequest, setAuthUser]
   );
 

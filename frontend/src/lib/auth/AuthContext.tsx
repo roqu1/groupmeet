@@ -3,7 +3,6 @@ import { API_CONFIG } from '@/config/api';
 import { ApiError, useHttp } from '@/hooks/useHttp';
 import { Gender } from '@/types/user';
 
-// Define the structure of the user object based on AuthResponseDto
 export interface AuthUser {
   id: number;
   gender: Gender;

@@ -8,10 +8,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * DTO for personal note data transfer.
- * Used for both requests and responses involving personal notes.
- */
 public class PersonalNoteDto {
     private Long id;
 

@@ -24,9 +24,6 @@ interface UseCalendarReturn {
 export function useCalendar(): UseCalendarReturn {
   const { sendRequest, isLoading, error, clearState } = useHttp();
 
-  /**
-   * Kalenderdaten für den aktuellen Benutzer innerhalb eines Datumsbereichs abrufen.
-   */
   const getCalendarData = useCallback(
     async (dateRange: CalendarDateRange): Promise<CalendarData> => {
       const queryParams = buildCalendarDateParams(dateRange.startDate, dateRange.endDate);
@@ -39,9 +36,6 @@ export function useCalendar(): UseCalendarReturn {
     [sendRequest]
   );
 
-  /**
-   * Detaillierte Informationen für ein bestimmtes Datum abrufen.
-   */
   const getDayDetails = useCallback(
     async (date: string): Promise<DayDetails> => {
       return (await sendRequest(API_CONFIG.endpoints.calendarDay(date), {
@@ -51,9 +45,6 @@ export function useCalendar(): UseCalendarReturn {
     [sendRequest]
   );
 
-  /**
-   * Eine persönliche Notiz für ein bestimmtes Datum erstellen oder aktualisieren.
-   */
   const savePersonalNote = useCallback(
     async (note: PersonalNoteRequest): Promise<PersonalNote> => {
       return (await sendRequest(API_CONFIG.endpoints.calendarNotes, {
@@ -64,9 +55,6 @@ export function useCalendar(): UseCalendarReturn {
     [sendRequest]
   );
 
-  /**
-   * Eine persönliche Notiz für ein bestimmtes Datum löschen.
-   */
   const deletePersonalNote = useCallback(
     async (date: string): Promise<void> => {
       await sendRequest(API_CONFIG.endpoints.calendarNoteDelete(date), {
@@ -76,9 +64,6 @@ export function useCalendar(): UseCalendarReturn {
     [sendRequest]
   );
 
-  /**
-   * Kalenderdaten eines bestimmten Benutzers abrufen (Freundeskalender).
-   */
   const getUserCalendarData = useCallback(
     async (userId: number, dateRange: CalendarDateRange): Promise<CalendarData> => {
       const queryParams = buildCalendarDateParams(dateRange.startDate, dateRange.endDate);
@@ -91,9 +76,6 @@ export function useCalendar(): UseCalendarReturn {
     [sendRequest]
   );
 
-  /**
-   * Tagesdetails für einen bestimmten Benutzerkalender abrufen.
-   */
   const getUserDayDetails = useCallback(
     async (userId: number, date: string): Promise<DayDetails> => {
       return (await sendRequest(API_CONFIG.endpoints.userCalendarDay(userId, date), {

@@ -11,20 +11,17 @@ export default function CalendarPage() {
   const { userId } = useParams<{ userId?: string }>();
   const [showInstructions, setShowInstructions] = useState(true);
 
-  // FIXED: Use useCallback to prevent re-renders
   const [calendarRefresh, setCalendarRefresh] = useState<(() => Promise<void>) | null>(null);
 
   const userIdNumber = userId ? parseInt(userId, 10) : undefined;
   const isOwnCalendar = !userIdNumber;
 
-  // FIXED: Wrap in useCallback to prevent re-renders
   const handleRefreshReady = useCallback((refreshFn: () => Promise<void>) => {
     setCalendarRefresh(() => refreshFn);
   }, []);
 
   return (
     <div className="container-wrapper py-8">
-      {/* Page Header */}
       <div className="mb-6">
         {isOwnCalendar ? (
           <div className="flex items-center justify-between">
@@ -62,7 +59,6 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Dismissible Calendar Instructions */}
       {showInstructions && (
         <div className="mb-6 p-4 bg-accent/50 border rounded-lg relative">
           <Button

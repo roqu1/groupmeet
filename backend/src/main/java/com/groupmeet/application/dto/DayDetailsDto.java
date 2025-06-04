@@ -2,10 +2,7 @@ package com.groupmeet.application.dto;
 
 import java.time.LocalDate;
 import java.util.List;
-/**
- * DTO for day detail information, used when a user clicks on a specific date.
- * Contains all events and notes for that specific date.
- */
+
 public class DayDetailsDto {
     private LocalDate date;
     private List<CalendarEventDto> eventsForDay;

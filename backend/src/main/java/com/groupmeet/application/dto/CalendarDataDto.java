@@ -2,10 +2,7 @@ package com.groupmeet.application.dto;
 
 import java.time.LocalDate;
 import java.util.List;
-/**
- * DTO for calendar data response, containing all calendar information for a date range.
- * This provides everything the frontend needs to render a user's calendar.
- */
+
 public class CalendarDataDto {
     private List<CalendarEventDto> events;
     private List<PersonalNoteDto> notes;
