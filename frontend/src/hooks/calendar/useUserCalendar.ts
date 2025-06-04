@@ -36,15 +36,15 @@ export function useUserCalendar(): UseCalendarReturn {
    * @returns Promise resolving to complete calendar data
    */
   const getCalendarData = useCallback(
-      async (dateRange: CalendarDateRange): Promise<CalendarData> => {
-        const queryParams = buildCalendarDateParams(dateRange.startDate, dateRange.endDate);
-        const url = `${API_CONFIG.endpoints.calendar}?${queryParams}`;
+    async (dateRange: CalendarDateRange): Promise<CalendarData> => {
+      const queryParams = buildCalendarDateParams(dateRange.startDate, dateRange.endDate);
+      const url = `${API_CONFIG.endpoints.calendar}?${queryParams}`;
 
-        return await sendRequest(url, {
-          method: 'GET',
-        }) as CalendarData;
-      },
-      [sendRequest]
+      return (await sendRequest(url, {
+        method: 'GET',
+      })) as CalendarData;
+    },
+    [sendRequest]
   );
 
   /**
@@ -55,12 +55,12 @@ export function useUserCalendar(): UseCalendarReturn {
    * @returns Promise resolving to day details including events and notes
    */
   const getDayDetails = useCallback(
-      async (date: string): Promise<DayDetails> => {
-        return await sendRequest(API_CONFIG.endpoints.calendarDay(date), {
-          method: 'GET',
-        }) as DayDetails;
-      },
-      [sendRequest]
+    async (date: string): Promise<DayDetails> => {
+      return (await sendRequest(API_CONFIG.endpoints.calendarDay(date), {
+        method: 'GET',
+      })) as DayDetails;
+    },
+    [sendRequest]
   );
 
   /**
@@ -71,13 +71,13 @@ export function useUserCalendar(): UseCalendarReturn {
    * @returns Promise resolving to the saved note
    */
   const savePersonalNote = useCallback(
-      async (note: PersonalNoteRequest): Promise<PersonalNote> => {
-        return await sendRequest(API_CONFIG.endpoints.calendarNotes, {
-          method: 'POST',
-          body: note,
-        }) as PersonalNote;
-      },
-      [sendRequest]
+    async (note: PersonalNoteRequest): Promise<PersonalNote> => {
+      return (await sendRequest(API_CONFIG.endpoints.calendarNotes, {
+        method: 'POST',
+        body: note,
+      })) as PersonalNote;
+    },
+    [sendRequest]
   );
 
   /**
@@ -88,12 +88,12 @@ export function useUserCalendar(): UseCalendarReturn {
    * @returns Promise that resolves when deletion is complete
    */
   const deletePersonalNote = useCallback(
-      async (date: string): Promise<void> => {
-        await sendRequest(API_CONFIG.endpoints.calendarNoteDelete(date), {
-          method: 'DELETE',
-        });
-      },
-      [sendRequest]
+    async (date: string): Promise<void> => {
+      await sendRequest(API_CONFIG.endpoints.calendarNoteDelete(date), {
+        method: 'DELETE',
+      });
+    },
+    [sendRequest]
   );
 
   return {
