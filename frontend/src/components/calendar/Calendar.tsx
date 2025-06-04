@@ -35,6 +35,9 @@ interface CalendarProps {
   className?: string;
 }
 
+// Calendar configuration constants
+const CALENDAR_HEIGHT = 600;
+
 // Configure date-fns localizer for German locale
 const locales = {
   de: de,
@@ -277,7 +280,7 @@ export default function Calendar({ userId, className }: CalendarProps) {
           culture="de"
           messages={messages}
           // Styling
-          style={{ height: 600 }}
+          style={{ height: CALENDAR_HEIGHT }}
           dayLayoutAlgorithm="no-overlap"
           // Custom components
           components={calendarComponents}

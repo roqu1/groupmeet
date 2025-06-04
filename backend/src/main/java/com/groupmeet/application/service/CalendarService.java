@@ -227,24 +227,33 @@ public class CalendarService {
      * @param user the current user (to determine if they're the organizer)
      * @return calendar event DTO
      */
-    private CalendarEventDto convertMeetingToCalendarEvent(Object meeting, User user) {
-        // This method needs to be implemented based on your Meeting entity structure
-        // Example structure:
-        /*
-        return new CalendarEventDto(
-            meeting.getId(),
-            meeting.getTitle(),
-            meeting.getDescription(),
-            meeting.getDateTime(),
-            meeting.getLocation(),
-            meeting.getFormat().toString(),
-            meeting.getOrganizer().getId().equals(user.getId()),
-            meeting.getParticipants().size()
-        );
-        */
-
-        // Placeholder - replace with actual implementation
-        throw new UnsupportedOperationException("Meeting to CalendarEvent conversion not yet implemented");
+    private CalendarEventDto convertMeetingToCalendarEvent(Meeting meeting, User user) {
+        try {
+            // Extract data from the Meeting entity
+            return new CalendarEventDto(
+                    meeting.getId(), // Retrieve the meeting ID
+                    meeting.getTitle(), // Retrieve the meeting title
+                    meeting.getDescription(), // Retrieve the meeting description
+                    meeting.getDateTime(), // Retrieve the meeting date/time
+                    meeting.getLocation(), // Retrieve the meeting location
+                    meeting.getFormat(), // Retrieve the meeting format
+                    meeting.getOrganizer().equals(user), // Check if the user is the organizer
+                    meeting.getParticipants().size() // Retrieve the participant count
+            );
+        } catch (Exception e) {
+            logger.error("Error converting meeting to calendar event: {}", e.getMessage());
+            // Return a fallback DTO in case of errors
+            return new CalendarEventDto(
+                    meeting.getId(),
+                    "Event Title Unavailable",
+                    "Event details could not be loaded",
+                    LocalDateTime.now(),
+                    "Location TBD",
+                    "OFFLINE",
+                    false,
+                    0
+            );
+        }
     }
 
     /**
