@@ -2,7 +2,7 @@
 
 This is a full-stack application built with React (TypeScript) frontend, Spring Boot backend, and PostgreSQL database. It features JWT-based authentication using HttpOnly cookies and CSRF protection.
 
-*Last updated: May 17, 2025*
+*Last updated: Juni 4, 2025*
 
 ## Quick Start
 
@@ -40,13 +40,14 @@ Detailed documentation is available in the [docs](docs) directory:
 ## Project Architecture
 
 ### Frontend
-- React (v19.0.0) with TypeScript
+- React (Vite) with TypeScript
 - JWT authentication with cookie storage
-- React Query for data fetching
-- Modern UI with responsive design
+- React Query for data fetching and state management
+- Tailwind CSS for styling
+- Shadcn/ui for UI components
 
 ### Backend
-- Spring Boot (v3.4.3)
+- Spring Boot (v3.x)
 - Spring Security with JWT authentication
 - PostgreSQL database with JPA/Hibernate
 - RESTful API design
